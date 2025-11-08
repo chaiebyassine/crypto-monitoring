@@ -1,40 +1,45 @@
-// backend/src/providers/CoinGeckoProvider.ts
 import { env } from "../config/env.js";
 
-type CGResp = Record<string, {
-  usd: number; usd_market_cap?: number; usd_24h_change?: number
-}>;
+type CoinGeckoItem = {
+  id: string;
+  name: string;
+  current_price: number;
+  market_cap?: number;
+  total_volume?: number;
+  price_change_percentage_24h?: number;
+};
 
 export async function fetchFromCoinGecko(ids: string[]) {
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), env.httpTimeout);
+  const url =
+    "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=" +
+    ids.join(",");
 
-  const base = "https://api.coingecko.com/api/v3/simple/price";
-  const qs = new URLSearchParams({
-    ids: ids.join(","),
-    vs_currencies: "usd",
-    include_24hr_change: "true",
-    include_market_cap: "true",
-    precision: "full",
-  });
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), env.httpTimeout);
 
-  const res = await fetch(`${base}?${qs.toString()}`, {
-    signal: ac.signal,
-    headers: { accept: "application/json" },
-  });
-  clearTimeout(t);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const data = (await res.json()) as CoinGeckoItem[];
 
-  const json = (await res.json()) as CGResp;
-  return ids.filter((id) => json[id]).map((id) => ({
-    providerId: id,
-    source: "coingecko" as const,
-    symbol: id,
-    name: id,
-    priceUsd: json[id].usd,
-    volume24hUsd: null,
-    marketCapUsd: json[id].usd_market_cap ?? null,
-    change24hPct: json[id].usd_24h_change ?? null,
-  }));
+    return data.map((it) => ({
+      providerId: it.id,
+      source: "coingecko" as const,
+      symbol: it.id,
+      name: it.name,
+      priceUsd: it.current_price,
+      volume24hUsd: it.total_volume ?? null,
+      marketCapUsd: it.market_cap ?? null,
+      change24hPct:
+        typeof it.price_change_percentage_24h === "number"
+          ? it.price_change_percentage_24h
+          : null,
+    }));
+  } finally {
+    clearTimeout(t);
+  }
 }

@@ -19,12 +19,12 @@ export const env = {
     .filter(Boolean),
 
   // Fréquence de collecte en secondes (utilisée par le scheduler)
-  intervalSeconds: Number(process.env.INTERVAL_SECONDS ?? 300),
+  intervalSeconds: Number(process.env.INTERVAL_SECONDS ?? 60),
 
   // Timeout HTTP en millisecondes pour les appels au fournisseur
   httpTimeout: Number(process.env.HTTP_TIMEOUT ?? 20000),
 
   // Nom du fournisseur de données (ici "coincap")
-  provider: (process.env.PROVIDER ?? "coincap").toLowerCase(),
+  provider: (process.env.PROVIDER ?? "coingecko").toLowerCase(),
 } as const;
 
