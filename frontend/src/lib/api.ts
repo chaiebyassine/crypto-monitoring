@@ -16,3 +16,9 @@ export async function fetchPrices(symbol: string, limit = 50): Promise<PricePoin
   const j = await r.json();
   return (j.data ?? []).map((d: any) => ({ t: d.t, priceUsd: d.priceUsd }));
 }
+export async function fetchChanges(): Promise<{symbol:string;name:string;last:number|null;change24hPct:number|null}[]> {
+  const r = await fetch(`${import.meta.env.VITE_API_URL}/changes`);
+  const j = await r.json();
+  return j.data ?? [];
+}
+
