@@ -1,0 +1,43 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Asset {
+  id         Int              @id @default(autoincrement())
+  providerId String           @unique // ex: "bitcoin"
+  source     String // ex: "coincap"
+  symbol     String
+  name       String
+  createdAt  DateTime         @default(now())
+  snapshots  MarketSnapshot[]
+}
+
+model MarketSnapshot {
+  id           Int       @id @default(autoincrement())
+  assetId      Int
+  ingestedAt   DateTime  @default(now())
+  providerTs   DateTime?
+  priceUsd     Float
+  volume24hUsd Float?
+  marketCapUsd Float?
+  change24hPct Float?
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@index([assetId, ingestedAt(sort: Desc)])
+}
+
+model CollectRun {
+  id            Int       @id @default(autoincrement())
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  status        String // running | success | fail | partial
+  assetsCount   Int
+  insertedCount Int
+  errorMessage  String?
+}
