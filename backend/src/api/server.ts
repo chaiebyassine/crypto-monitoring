@@ -1,28 +1,23 @@
 
-/**
- * Mini API HTTP avec Express.
- *  - GET /           : message d'accueil
- *  - GET /health     : ping (pour savoir si le service tourne)
- *  - POST /collect   : déclenche manuellement un run (appel runOnce)
- *  - GET /prices     : lit l'historique d'un symbole (ex: ?symbol=bitcoin&limit=5)
- */
-
 import express from "express";
+import cors from "cors";
 import { runOnce } from "../services/CollectService.js";
 import { prisma } from "../repos/prisma.js";
 
 export function createServer() {
   const app = express();
 
-  // Accueil : utile pour vérifier vite si l'API répond
+  app.use(cors({ origin: true }));
+
+ 
   app.get("/", (_req, res) => {
-    res.type("text").send("Backend OK. Essayez /health, POST /collect, GET /prices");
+    res.type("text").send("Backend OK. Essayez /health, POST /collect, GET /assets, GET /prices");
   });
 
-  // Ping de santé
+ 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-  // Déclenche un run à la demande (pratique pour tester depuis Postman/curl)
+  
   app.post("/collect", async (_req, res) => {
     try {
       const summary = await runOnce();
@@ -32,35 +27,65 @@ export function createServer() {
     }
   });
 
-  // Lecture de l'historique : dernières N valeurs pour un symbole donné
+  app.get("/assets", async (_req, res) => {
+    const assets = await prisma.asset.findMany({
+      orderBy: { symbol: "asc" },
+      select: { id: true, symbol: true, name: true },
+    });
+    res.set("Cache-Control", "public, max-age=10"); 
+    res.json({ data: assets });
+  });
+
+  
   app.get("/prices", async (req, res) => {
     const symbol = String(req.query.symbol ?? "").trim().toLowerCase();
-    const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 20)));
+    const limit = Number.isFinite(Number(req.query.limit))
+      ? Math.min(200, Math.max(1, Number(req.query.limit)))
+      : 20;
 
     if (!symbol) return res.status(400).json({ error: "symbol manquant" });
+    app.get("/changes", async (_req, res) => {
+  const assets = await prisma.asset.findMany({ select: { id: true, symbol: true, name: true } });
+  const out: Array<{symbol:string; name:string; last:number|null; change24hPct:number|null}> = [];
 
-    // On cherche l'asset correspondant
+  for (const a of assets) {
+    const last = await prisma.marketSnapshot.findFirst({
+      where: { assetId: a.id },
+      orderBy: { ingestedAt: "desc" },
+      select: { priceUsd: true, change24hPct: true },
+    });
+    out.push({
+      symbol: a.symbol,
+      name: a.name,
+      last: last?.priceUsd ?? null,
+      change24hPct: last?.change24hPct ?? null,
+    });
+  }
+  res.json({ data: out });
+});
+
+
     const asset = await prisma.asset.findFirst({ where: { symbol } });
-    if (!asset) return res.json({ data: [] });
+    if (!asset) return res.json({ symbol, data: [] });
 
-    // On récupère les derniers snapshots (ordre décroissant)
     const snapshots = await prisma.marketSnapshot.findMany({
       where: { assetId: asset.id },
       orderBy: { ingestedAt: "desc" },
       take: limit,
     });
 
-    // On renvoie un format simple pour le front
-    res.json({
-      symbol,
-      data: snapshots.map((s) => ({
-        t: s.ingestedAt,
-        priceUsd: s.priceUsd,
-        volume24hUsd: s.volume24hUsd,
-        marketCapUsd: s.marketCapUsd,
-        change24hPct: s.change24hPct,
-      })),
-    });
+    const dataDesc = snapshots.map((s) => ({
+      t: s.ingestedAt,
+      priceUsd: s.priceUsd,
+      volume24hUsd: s.volume24hUsd,
+      marketCapUsd: s.marketCapUsd,
+      change24hPct: s.change24hPct,
+    }));
+
+    const dataAsc = dataDesc.reverse();
+
+    res.set("Cache-Control", "no-store");
+    res.json({ symbol, data: dataAsc });
   });
 
   return app;
