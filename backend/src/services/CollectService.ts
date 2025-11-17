@@ -10,7 +10,6 @@ export async function runOnce() {
   try {
     const ids = env.coins;
 
-    // ----> CoinGecko only
     const rows = await fetchFromCoinGecko(ids);
 
     let inserted = 0;
