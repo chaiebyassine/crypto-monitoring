@@ -44,7 +44,7 @@ export function createServer() {
       : 20;
 
     if (!symbol) return res.status(400).json({ error: "symbol manquant" });
-    app.get("/changes", async (_req, res) => {
+  app.get("/changes", async (_req, res) => {
   const assets = await prisma.asset.findMany({ select: { id: true, symbol: true, name: true } });
   const out: Array<{symbol:string; name:string; last:number|null; change24hPct:number|null}> = [];
 

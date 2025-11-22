@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: gla-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gla_user
+      POSTGRES_PASSWORD: gla_pass
+      POSTGRES_DB: gla_db
+    ports:
+      - "5432:5432"         
+    volumes:
+      - gla-db-data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: gla-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "3001:3001"       
+    command: npm run dev    
+
+volumes:
+  gla-db-data:
