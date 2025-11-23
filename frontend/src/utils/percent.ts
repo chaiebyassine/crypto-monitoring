@@ -1,4 +1,3 @@
-// src/utils/percent.ts
 import type { PricePoint } from "../lib/api";
 
 export function normalizeSeries(series: PricePoint[]) {

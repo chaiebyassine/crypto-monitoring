@@ -1,4 +1,3 @@
-// src/components/PriceBadges.tsx
 type Props = {
   lastPrice?: string;
   lastTime: string;

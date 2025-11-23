@@ -1,4 +1,3 @@
-// src/utils/series.ts
 import type { PricePoint } from "../lib/api";
 import { sma, ema } from "./indicators";
 
