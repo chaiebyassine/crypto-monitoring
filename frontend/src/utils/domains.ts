@@ -1,4 +1,3 @@
-// src/utils/domains.ts
 export function minmax(nums: number[]) {
   const arr = nums.filter((n) => Number.isFinite(n)) as number[];
   if (arr.length === 0) return [0, 0] as const;

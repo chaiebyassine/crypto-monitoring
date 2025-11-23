@@ -1,4 +1,3 @@
-// src/components/Controls.tsx
 import type { Asset } from "../lib/api";
 
 type Props = {
