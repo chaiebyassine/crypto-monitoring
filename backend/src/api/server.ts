@@ -105,6 +105,77 @@ export function createServer() {
     res.set("Cache-Control", "no-store");
     res.json({ symbol, data: dataAsc });
   });
+    app.get("/prices/ohlc", async (req, res) => {
+    const symbol = String(req.query.symbol ?? "").trim().toLowerCase();
+    const gran = String(req.query.granularity ?? "1h"); 
+
+    if (!symbol) {
+      return res.status(400).json({ error: "symbol manquant" });
+    }
+
+    const asset = await prisma.asset.findFirst({ where: { symbol } });
+    if (!asset) {
+      return res.json({ symbol, granularity: gran, data: [] });
+    }
+
+    let bucketMs: number;
+    if (gran === "24h") {
+      bucketMs = 24 * 60 * 60 * 1000;
+    } else if (gran === "6h") {
+      bucketMs = 6 * 60 * 60 * 1000;
+    } else {
+      bucketMs = 60 * 60 * 1000; 
+    }
+
+    const snapshots = await prisma.marketSnapshot.findMany({
+      where: { assetId: asset.id },
+      orderBy: { ingestedAt: "asc" },
+      select: { ingestedAt: true, priceUsd: true },
+      take: 5000, 
+    });
+
+    type Candle = { t: Date; open: number; high: number; low: number; close: number };
+
+    const candles: Candle[] = [];
+
+    let currentBucketStart: number | null = null;
+    let currentCandle: Candle | null = null;
+
+    for (const s of snapshots) {
+      if (s.priceUsd == null) continue;
+
+      const ts = s.ingestedAt.getTime();
+      const bucketStart = Math.floor(ts / bucketMs) * bucketMs; 
+
+     
+      if (currentBucketStart === null || bucketStart !== currentBucketStart) {
+        if (currentCandle) {
+          candles.push(currentCandle);
+        }
+
+        currentBucketStart = bucketStart;
+        currentCandle = {
+          t: new Date(bucketStart),
+          open: s.priceUsd,
+          high: s.priceUsd,
+          low: s.priceUsd,
+          close: s.priceUsd,
+        };
+      } else {
+        if (!currentCandle) continue;
+        if (s.priceUsd > currentCandle.high) currentCandle.high = s.priceUsd;
+        if (s.priceUsd < currentCandle.low) currentCandle.low = s.priceUsd;
+        currentCandle.close = s.priceUsd;
+      }
+    }
+
+    if (currentCandle) {
+      candles.push(currentCandle);
+    }
+
+    res.json({ symbol, granularity: gran, data: candles });
+  });
+
 
   return app;
 }
