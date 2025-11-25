@@ -21,4 +21,36 @@ export async function fetchChanges(): Promise<{symbol:string;name:string;last:nu
   const j = await r.json();
   return j.data ?? [];
 }
+export type OhlcPoint = {
+  t: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number | null;
+};
+
+export async function fetchOhlc(
+  symbol: string,
+  granularity: string = "1h"
+): Promise<OhlcPoint[]> {
+  const r = await fetch(
+    `${BASE}/prices/ohlc?symbol=${encodeURIComponent(
+      symbol
+    )}&granularity=${encodeURIComponent(granularity)}`
+  );
+  if (!r.ok) {
+    throw new Error("Failed /prices/ohlc");
+  }
+  const j = await r.json();
+  return (j.data ?? []).map((d: any) => ({
+    t: d.t,
+    open: d.open,
+    high: d.high,
+    low: d.low,
+    close: d.close,
+    volume: d.volume ?? d.volumeUsd ?? null,
+  }));
+}
+
 
