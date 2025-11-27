@@ -10,12 +10,15 @@ generator client {
 
 model Asset {
   id         Int              @id @default(autoincrement())
-  providerId String           @unique // ex: "bitcoin"
-  source     String // ex: "coincap"
+  providerId String           @unique 
+  source     String 
   symbol     String
   name       String
   createdAt  DateTime         @default(now())
   snapshots  MarketSnapshot[]
+  alerts     Alert[]
+  positions  Position[]
+  trades     Trade[]
 }
 
 model MarketSnapshot {
@@ -37,8 +40,79 @@ model CollectRun {
   id            Int       @id @default(autoincrement())
   startedAt     DateTime  @default(now())
   endedAt       DateTime?
-  status        String // running | success | fail | partial
+  status        String 
   assetsCount   Int
   insertedCount Int
   errorMessage  String?
+}
+
+model Alert {
+  id            Int               @id @default(autoincrement())
+  assetId       Int
+  type          String 
+  threshold     Float
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  lastTriggered DateTime?
+  notifications NotificationLog[]
+
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@index([assetId, isActive])
+}
+
+model NotificationLog {
+  id        Int      @id @default(autoincrement())
+  alertId   Int
+  sentAt    DateTime @default(now())
+  channel   String 
+  payload   Json?
+  success   Boolean
+  errorMsg  String?
+
+  alert Alert @relation(fields: [alertId], references: [id])
+
+  @@index([alertId, sentAt(sort: Desc)])
+}
+
+model Portfolio {
+  id        Int        @id @default(autoincrement())
+  name      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  positions Position[]
+  trades    Trade[]
+}
+
+model Position {
+  id          Int      @id @default(autoincrement())
+  portfolioId Int
+  assetId     Int
+  quantity    Float
+  avgCost     Float
+  updatedAt   DateTime @updatedAt
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
+  asset     Asset     @relation(fields: [assetId], references: [id])
+
+  @@unique([portfolioId, assetId])
+  @@index([portfolioId])
+}
+
+model Trade {
+  id          Int      @id @default(autoincrement())
+  portfolioId Int
+  assetId     Int
+  side        String 
+  quantity    Float
+  priceUsd    Float
+  totalUsd    Float
+  executedAt  DateTime @default(now())
+  notes       String?
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
+  asset     Asset     @relation(fields: [assetId], references: [id])
+
+  @@index([portfolioId, executedAt(sort: Desc)])
+  @@index([assetId])
 }
