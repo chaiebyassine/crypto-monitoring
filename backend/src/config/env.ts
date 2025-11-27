@@ -11,10 +11,12 @@ export const env = {
     .map((s) => s.trim())
     .filter(Boolean),
 
-  intervalSeconds: Number(process.env.INTERVAL_SECONDS ?? 60),
+  intervalSeconds: Number(process.env.INTERVAL_SECONDS ?? 300),
 
   httpTimeout: Number(process.env.HTTP_TIMEOUT ?? 20000),
 
   provider: (process.env.PROVIDER ?? "coingecko").toLowerCase(),
+
+  discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? "",
 } as const;
 

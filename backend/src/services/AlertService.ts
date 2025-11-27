@@ -1,4 +1,5 @@
 import { prisma } from "../repos/prisma.js";
+import { sendAlertNotification } from "./NotifierService.js";
 
 export type AlertType = "price_above" | "price_below" | "change_above" | "change_below";
 
@@ -6,6 +7,17 @@ interface LatestPrice {
   assetId: number;
   priceUsd: number;
   change24hPct: number | null;
+}
+
+interface AlertWithAsset {
+  id: number;
+  assetId: number;
+  type: string;
+  threshold: number;
+  asset: {
+    name: string;
+    symbol: string;
+  };
 }
 
 
@@ -41,7 +53,7 @@ export async function evaluateAlerts(): Promise<{
     );
 
     if (isTriggered) {
-      await triggerAlert(alert.id, latest.priceUsd);
+      await triggerAlert(alert as AlertWithAsset, latest);
       triggered++;
     }
   }
@@ -91,26 +103,53 @@ function checkAlertCondition(
   }
 }
 
-async function triggerAlert(alertId: number, currentPrice: number): Promise<void> {
+async function triggerAlert(
+  alert: AlertWithAsset,
+  latest: LatestPrice
+): Promise<void> {
   const now = new Date();
 
-  await prisma.$transaction([
-    prisma.alert.update({
-      where: { id: alertId },
-      data: { lastTriggered: now },
-    }),
+  // Update alert's lastTriggered timestamp
+  await prisma.alert.update({
+    where: { id: alert.id },
+    data: { lastTriggered: now },
+  });
 
-    prisma.notificationLog.create({
-      data: {
-        alertId,
-        channel: "system", 
-        payload: { currentPrice, triggeredAt: now.toISOString() },
-        success: true,
+  // Send Discord notification
+  const notifyResult = await sendAlertNotification({
+    assetName: alert.asset.name,
+    assetSymbol: alert.asset.symbol,
+    alertType: alert.type,
+    threshold: alert.threshold,
+    currentPrice: latest.priceUsd,
+    change24hPct: latest.change24hPct,
+  });
+
+  // Record notification log
+  await prisma.notificationLog.create({
+    data: {
+      alertId: alert.id,
+      channel: "discord",
+      payload: {
+        currentPrice: latest.priceUsd,
+        threshold: alert.threshold,
+        alertType: alert.type,
+        triggeredAt: now.toISOString(),
       },
-    }),
-  ]);
+      success: notifyResult.success,
+      errorMsg: notifyResult.errorMsg ?? null,
+    },
+  });
 
-  console.log(`Alert ${alertId} triggered at price ${currentPrice}`);
+  if (notifyResult.success) {
+    console.log(
+      `Alert ${alert.id} triggered: ${alert.asset.symbol} ${alert.type} ${alert.threshold} (current: ${latest.priceUsd})`
+    );
+  } else {
+    console.error(
+      `Alert ${alert.id} triggered but notification failed: ${notifyResult.errorMsg}`
+    );
+  }
 }
 export async function createAlert(
   assetId: number,

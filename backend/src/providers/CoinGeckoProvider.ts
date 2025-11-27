@@ -9,7 +9,14 @@ type CoinGeckoItem = {
   price_change_percentage_24h?: number;
 };
 
+let rateLimitedUntil: number | null = null;
+
 export async function fetchFromCoinGecko(ids: string[]) {
+  if (rateLimitedUntil && Date.now() < rateLimitedUntil) {
+    const waitSecs = Math.ceil((rateLimitedUntil - Date.now()) / 1000);
+    throw new Error(`Rate limited, retry in ${waitSecs}s`);
+  }
+
   const url =
     "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=" +
     ids.join(",");
@@ -22,7 +29,15 @@ export async function fetchFromCoinGecko(ids: string[]) {
       signal: controller.signal,
       headers: { accept: "application/json" },
     });
+
+    if (res.status === 429) {
+      rateLimitedUntil = Date.now() + 60_000;
+      throw new Error("Rate limited by CoinGecko, backing off for 60s");
+    }
+
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+
+    rateLimitedUntil = null;
 
     const data = (await res.json()) as CoinGeckoItem[];
 
