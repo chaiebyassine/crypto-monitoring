@@ -235,9 +235,6 @@ async function getCurrentPrice(assetId: number): Promise<number | null> {
   return snapshot?.priceUsd ?? null;
 }
 
-/**
- * Calculate unrealized PnL for a position
- */
 export function calculateUnrealizedPnL(
   quantity: number,
   avgCost: number,
@@ -251,9 +248,6 @@ export function calculateUnrealizedPnL(
   return { pnl, pnlPct };
 }
 
-/**
- * Get portfolio positions with current PnL
- */
 export async function getPortfolioPnL(
   portfolioId: number
 ): Promise<PortfolioPnL | null> {
@@ -300,7 +294,6 @@ export async function getPortfolioPnL(
     totalValue += currentValue;
   }
 
-  // Calculate realized PnL from closed trades
   const realizedPnl = await calculateRealizedPnL(portfolioId);
 
   const unrealizedPnl = totalValue - totalCost;
@@ -320,18 +313,13 @@ export async function getPortfolioPnL(
   };
 }
 
-/**
- * Calculate total realized PnL for a portfolio
- * Realized PnL comes from SELL trades: (sell_price - avg_cost_at_time) * quantity
- */
+
 async function calculateRealizedPnL(portfolioId: number): Promise<number> {
-  // Get all trades for the portfolio grouped by asset
   const trades = await prisma.trade.findMany({
     where: { portfolioId },
     orderBy: { executedAt: "asc" },
   });
 
-  // Track running position and avg cost per asset
   const assetState = new Map<
     number,
     { quantity: number; avgCost: number; realizedPnl: number }
@@ -345,23 +333,19 @@ async function calculateRealizedPnL(portfolioId: number): Promise<number> {
     };
 
     if (trade.side === "buy") {
-      // Update weighted average cost
       const newTotalCost =
         state.quantity * state.avgCost + trade.quantity * trade.priceUsd;
       state.quantity += trade.quantity;
       state.avgCost = state.quantity > 0 ? newTotalCost / state.quantity : 0;
     } else {
-      // Calculate realized PnL for this sell
       const pnl = (trade.priceUsd - state.avgCost) * trade.quantity;
       state.realizedPnl += pnl;
       state.quantity -= trade.quantity;
-      // avgCost stays the same for remaining quantity
     }
 
     assetState.set(trade.assetId, state);
   }
 
-  // Sum all realized PnL
   let totalRealizedPnl = 0;
   for (const state of assetState.values()) {
     totalRealizedPnl += state.realizedPnl;
@@ -369,10 +353,6 @@ async function calculateRealizedPnL(portfolioId: number): Promise<number> {
 
   return totalRealizedPnl;
 }
-
-/**
- * Get trade history for a portfolio
- */
 export async function getTradeHistory(
   portfolioId: number,
   limit: number = 50
@@ -384,10 +364,6 @@ export async function getTradeHistory(
     take: limit,
   });
 }
-
-/**
- * Get trade history for an asset within a portfolio
- */
 export async function getAssetTradeHistory(
   portfolioId: number,
   assetId: number,
