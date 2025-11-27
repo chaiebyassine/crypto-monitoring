@@ -16,5 +16,7 @@ export const env = {
   httpTimeout: Number(process.env.HTTP_TIMEOUT ?? 20000),
 
   provider: (process.env.PROVIDER ?? "coingecko").toLowerCase(),
+
+  discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? "https://discord.com/api/webhooks/1443666875518025881/0wO-jeJUkyG_ESjnYAgndErqwDRK-0gTwzlRwqNHwDbE1apG3o7_qND3fHmxxekiCJR0",
 } as const;
 
