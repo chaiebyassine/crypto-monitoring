@@ -10,6 +10,10 @@ import {
   getAlertsByAsset,
   type AlertType,
 } from "../services/AlertService.js";
+import {
+  generateForecast,
+  type ForecastMethod,
+} from "../services/ForecastService.js";
 
 export function createServer() {
   const app = express();
@@ -330,6 +334,50 @@ export function createServer() {
       if (e?.code === "P2025") {
         return res.status(404).json({ error: "Alert not found" });
       }
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // ==================== FORECAST ROUTES ====================
+
+  app.get("/forecast", async (req, res) => {
+    try {
+      const symbol = String(req.query.symbol ?? "").trim().toLowerCase();
+      const method = (req.query.method ?? "ema") as ForecastMethod;
+      const history = Number(req.query.history) || 50;
+      const steps = Number(req.query.steps) || 10;
+
+      if (!symbol) {
+        return res.status(400).json({ error: "symbol is required" });
+      }
+
+      // Validate method
+      const validMethods: ForecastMethod[] = ["sma", "ema", "linear"];
+      if (!validMethods.includes(method)) {
+        return res.status(400).json({
+          error: `method must be one of: ${validMethods.join(", ")}`,
+        });
+      }
+
+      // Clamp parameters
+      const clampedHistory = Math.max(10, Math.min(200, history));
+      const clampedSteps = Math.max(1, Math.min(50, steps));
+
+      const forecast = await generateForecast(
+        symbol,
+        method,
+        clampedHistory,
+        clampedSteps
+      );
+
+      if (!forecast) {
+        return res.status(404).json({
+          error: "Asset not found or insufficient data for forecast",
+        });
+      }
+
+      res.json({ data: forecast });
+    } catch (e: any) {
       res.status(500).json({ error: String(e?.message ?? e) });
     }
   });
