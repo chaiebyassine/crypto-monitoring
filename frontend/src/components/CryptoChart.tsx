@@ -18,9 +18,18 @@ type Props = {
 export default function CryptoChart({
   data, symbol, compare, normalize, leftDomain, rightDomain, showSMA, showEMA,
 }: Props) {
+  // Don't render chart if no data
+  if (!data || data.length === 0) {
+    return (
+      <div className="chart-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: '#64748b' }}>No chart data available</span>
+      </div>
+    );
+  }
+
   return (
     <div className="chart-container">
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
           <XAxis
             dataKey="t"
