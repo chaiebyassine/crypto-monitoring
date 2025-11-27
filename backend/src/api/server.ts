@@ -14,6 +14,15 @@ import {
   generateForecast,
   type ForecastMethod,
 } from "../services/ForecastService.js";
+import {
+  createPortfolio,
+  getPortfolios,
+  getPortfolio,
+  executeTrade,
+  getPortfolioPnL,
+  getTradeHistory,
+  type TradeSide,
+} from "../services/PortfolioService.js";
 
 export function createServer() {
   const app = express();
@@ -338,7 +347,6 @@ export function createServer() {
     }
   });
 
-  // ==================== FORECAST ROUTES ====================
 
   app.get("/forecast", async (req, res) => {
     try {
@@ -351,7 +359,6 @@ export function createServer() {
         return res.status(400).json({ error: "symbol is required" });
       }
 
-      // Validate method
       const validMethods: ForecastMethod[] = ["sma", "ema", "linear"];
       if (!validMethods.includes(method)) {
         return res.status(400).json({
@@ -359,7 +366,6 @@ export function createServer() {
         });
       }
 
-      // Clamp parameters
       const clampedHistory = Math.max(10, Math.min(200, history));
       const clampedSteps = Math.max(1, Math.min(50, steps));
 
@@ -378,6 +384,186 @@ export function createServer() {
 
       res.json({ data: forecast });
     } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // ==================== PORTFOLIO ROUTES ====================
+
+  // List all portfolios
+  app.get("/portfolios", async (_req, res) => {
+    try {
+      const portfolios = await getPortfolios();
+      res.json({ data: portfolios });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Get portfolio by ID (with positions and recent trades)
+  app.get("/portfolios/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      const portfolio = await getPortfolio(id);
+      if (!portfolio) {
+        return res.status(404).json({ error: "Portfolio not found" });
+      }
+
+      res.json({ data: portfolio });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Create a new portfolio
+  app.post("/portfolios", async (req, res) => {
+    try {
+      const { name } = req.body;
+
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "name is required" });
+      }
+
+      const portfolio = await createPortfolio(name.trim());
+      res.status(201).json({ data: portfolio });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Delete a portfolio
+  app.delete("/portfolios/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      // Delete related records first
+      await prisma.trade.deleteMany({ where: { portfolioId: id } });
+      await prisma.position.deleteMany({ where: { portfolioId: id } });
+      await prisma.portfolio.delete({ where: { id } });
+
+      res.json({ ok: true, message: "Portfolio deleted" });
+    } catch (e: any) {
+      if (e?.code === "P2025") {
+        return res.status(404).json({ error: "Portfolio not found" });
+      }
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Get portfolio PnL (positions with current prices and unrealized/realized PnL)
+  app.get("/portfolios/:id/pnl", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      const pnl = await getPortfolioPnL(id);
+      if (!pnl) {
+        return res.status(404).json({ error: "Portfolio not found" });
+      }
+
+      res.json({ data: pnl });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Get portfolio positions
+  app.get("/portfolios/:id/positions", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      const positions = await prisma.position.findMany({
+        where: { portfolioId: id },
+        include: { asset: true },
+        orderBy: { updatedAt: "desc" },
+      });
+
+      res.json({ data: positions });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Get portfolio trade history
+  app.get("/portfolios/:id/trades", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const limit = Number(req.query.limit) || 50;
+
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      const trades = await getTradeHistory(id, Math.min(200, Math.max(1, limit)));
+      res.json({ data: trades });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  // Execute a trade (BUY or SELL)
+  app.post("/portfolios/:id/trades", async (req, res) => {
+    try {
+      const portfolioId = Number(req.params.id);
+      if (!Number.isFinite(portfolioId)) {
+        return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      const { assetId, side, quantity, priceUsd, notes } = req.body;
+
+      // Validate assetId
+      if (!Number.isFinite(assetId)) {
+        return res.status(400).json({ error: "assetId must be a number" });
+      }
+
+      // Validate side
+      const validSides: TradeSide[] = ["buy", "sell"];
+      if (!validSides.includes(side)) {
+        return res.status(400).json({
+          error: "side must be 'buy' or 'sell'",
+        });
+      }
+
+      // Validate quantity
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: "quantity must be a positive number" });
+      }
+
+      // Validate price
+      if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+        return res.status(400).json({ error: "priceUsd must be a positive number" });
+      }
+
+      const result = await executeTrade({
+        portfolioId,
+        assetId,
+        side,
+        quantity,
+        priceUsd,
+        notes: notes ?? undefined,
+      });
+
+      res.status(201).json({ data: result });
+    } catch (e: any) {
+      // Handle specific errors
+      if (e?.message?.includes("Insufficient position")) {
+        return res.status(400).json({ error: e.message });
+      }
+      if (e?.message?.includes("not found")) {
+        return res.status(404).json({ error: e.message });
+      }
       res.status(500).json({ error: String(e?.message ?? e) });
     }
   });
