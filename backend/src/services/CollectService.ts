@@ -1,6 +1,7 @@
 import { prisma } from "../repos/prisma.js";
 import { env } from "../config/env.js";
 import { fetchFromCoinGecko } from "../providers/CoinGeckoProvider.js";
+import { evaluateAlerts } from "./AlertService.js";
 
 export async function runOnce() {
   const run = await prisma.collectRun.create({
@@ -50,7 +51,13 @@ export async function runOnce() {
       },
     });
 
-    return { inserted, total: rows.length };
+    // Evaluate alerts after successful collection
+    const alertResult = await evaluateAlerts();
+    console.log(
+      `Alerts evaluated: ${alertResult.evaluated}, triggered: ${alertResult.triggered}`
+    );
+
+    return { inserted, total: rows.length, alerts: alertResult };
   } catch (err: any) {
     await prisma.collectRun.update({
       where: { id: run.id },
