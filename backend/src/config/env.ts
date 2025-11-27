@@ -11,12 +11,12 @@ export const env = {
     .map((s) => s.trim())
     .filter(Boolean),
 
-  intervalSeconds: Number(process.env.INTERVAL_SECONDS ?? 60),
+  intervalSeconds: Number(process.env.INTERVAL_SECONDS ?? 300),
 
   httpTimeout: Number(process.env.HTTP_TIMEOUT ?? 20000),
 
   provider: (process.env.PROVIDER ?? "coingecko").toLowerCase(),
 
-  discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? "https://discord.com/api/webhooks/1443666875518025881/0wO-jeJUkyG_ESjnYAgndErqwDRK-0gTwzlRwqNHwDbE1apG3o7_qND3fHmxxekiCJR0",
+  discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL ?? "",
 } as const;
 

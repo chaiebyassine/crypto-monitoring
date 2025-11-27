@@ -3,11 +3,19 @@ import express from "express";
 import cors from "cors";
 import { runOnce } from "../services/CollectService.js";
 import { prisma } from "../repos/prisma.js";
+import {
+  createAlert,
+  deactivateAlert,
+  getActiveAlerts,
+  getAlertsByAsset,
+  type AlertType,
+} from "../services/AlertService.js";
 
 export function createServer() {
   const app = express();
 
   app.use(cors({ origin: true }));
+  app.use(express.json());
 
   
   app.get("/", (_req, res) => {
@@ -174,6 +182,156 @@ export function createServer() {
     }
 
     res.json({ symbol, granularity: gran, data: candles });
+  });
+
+  
+  app.get("/alerts", async (req, res) => {
+    try {
+      const assetId = req.query.assetId ? Number(req.query.assetId) : null;
+      const activeOnly = req.query.active === "true";
+
+      let alerts;
+      if (assetId) {
+        alerts = await getAlertsByAsset(assetId);
+        if (activeOnly) {
+          alerts = alerts.filter((a) => a.isActive);
+        }
+      } else if (activeOnly) {
+        alerts = await getActiveAlerts();
+      } else {
+        alerts = await prisma.alert.findMany({
+          include: { asset: true },
+          orderBy: { createdAt: "desc" },
+        });
+      }
+
+      res.json({ data: alerts });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  app.get("/alerts/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      const alert = await prisma.alert.findUnique({
+        where: { id },
+        include: { asset: true, notifications: { take: 10, orderBy: { sentAt: "desc" } } },
+      });
+
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+
+      res.json({ data: alert });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  app.post("/alerts", async (req, res) => {
+    try {
+      const { assetId, type, threshold } = req.body;
+
+      if (!Number.isFinite(assetId)) {
+        return res.status(400).json({ error: "assetId must be a number" });
+      }
+
+      if (!["price_above", "price_below", "change_above", "change_below"].includes(type)) {
+        return res.status(400).json({
+          error: `type must be one of: price_above, price_below, change_above, change_below`,
+        });
+      }
+      const validTypes: AlertType[] = ["price_above", "price_below", "change_above", "change_below"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({
+          error: `type must be one of: ${validTypes.join(", ")}`,
+        });
+      }
+
+      if (!Number.isFinite(threshold)) {
+        return res.status(400).json({ error: "threshold must be a number" });
+      }
+
+      
+      const asset = await prisma.asset.findUnique({ where: { id: assetId } });
+      if (!asset) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+
+      const alert = await createAlert(assetId, type, threshold);
+      res.status(201).json({ data: alert });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  
+  app.patch("/alerts/:id/activate", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      const alert = await prisma.alert.update({
+        where: { id },
+        data: { isActive: true },
+        include: { asset: true },
+      });
+
+      res.json({ data: alert });
+    } catch (e: any) {
+      if (e?.code === "P2025") {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  
+  app.patch("/alerts/:id/deactivate", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      const alert = await deactivateAlert(id);
+      res.json({ data: alert });
+    } catch (e: any) {
+      if (e?.code === "P2025") {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
+  });
+
+  
+  app.delete("/alerts/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      
+      await prisma.notificationLog.deleteMany({ where: { alertId: id } });
+
+      
+      await prisma.alert.delete({ where: { id } });
+
+      res.json({ ok: true, message: "Alert deleted" });
+    } catch (e: any) {
+      if (e?.code === "P2025") {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.status(500).json({ error: String(e?.message ?? e) });
+    }
   });
 
 
