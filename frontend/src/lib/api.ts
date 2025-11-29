@@ -194,9 +194,39 @@ export async function fetchPortfolioPnL(portfolioId: number): Promise<PortfolioP
 export async function fetchPositions(portfolioId: number): Promise<Position[]> {
   const r = await fetch(`${BASE}/portfolios/${portfolioId}/positions`);
   if (!r.ok) throw new Error("Failed /positions");
+
+export type OhlcPoint = {
+  t: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number | null;
+};
+
+export async function fetchOhlc(
+  symbol: string,
+  granularity: string = "1h"
+): Promise<OhlcPoint[]> {
+  const r = await fetch(
+    `${BASE}/prices/ohlc?symbol=${encodeURIComponent(
+      symbol
+    )}&granularity=${encodeURIComponent(granularity)}`
+  );
+  if (!r.ok) {
+    throw new Error("Failed /prices/ohlc");
+  }
   const j = await r.json();
-  return j.data ?? [];
+  return (j.data ?? []).map((d: any) => ({
+    t: d.t,
+    open: d.open,
+    high: d.high,
+    low: d.low,
+    close: d.close,
+    volume: d.volume ?? d.volumeUsd ?? null,
+  }));
 }
+
 
 export async function fetchTrades(portfolioId: number, limit = 20): Promise<Trade[]> {
   const r = await fetch(`${BASE}/portfolios/${portfolioId}/trades?limit=${limit}`);
