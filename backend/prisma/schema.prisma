@@ -8,6 +8,27 @@ generator client {
 }
 
 
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  portfolios Portfolio[]
+  alerts     Alert[]
+
+  @@index([email])
+}
+
+
 model Asset {
   id         Int              @id @default(autoincrement())
   providerId String           @unique 
@@ -49,6 +70,7 @@ model CollectRun {
 model Alert {
   id            Int               @id @default(autoincrement())
   assetId       Int
+  userId        Int?
   type          String 
   threshold     Float
   isActive      Boolean           @default(true)
@@ -57,8 +79,10 @@ model Alert {
   notifications NotificationLog[]
 
   asset Asset @relation(fields: [assetId], references: [id])
+  user  User? @relation(fields: [userId], references: [id])
 
   @@index([assetId, isActive])
+  @@index([userId])
 }
 
 model NotificationLog {
@@ -77,11 +101,16 @@ model NotificationLog {
 
 model Portfolio {
   id        Int        @id @default(autoincrement())
+  userId    Int?
   name      String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   positions Position[]
   trades    Trade[]
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model Position {
