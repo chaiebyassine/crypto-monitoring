@@ -293,7 +293,9 @@ export function createServer() {
   });
 
 
-  app.get("/alerts", async (req, res) => {
+  // ==================== ALERT ROUTES (PROTECTED) ====================
+
+  app.get("/alerts", authenticate, async (req, res) => {
     try {
       const assetId = req.query.assetId ? Number(req.query.assetId) : null;
       const activeOnly = req.query.active === "true";
@@ -318,7 +320,7 @@ export function createServer() {
     }
   });
 
-  app.get("/alerts/:id", async (req, res) => {
+  app.get("/alerts/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -344,7 +346,7 @@ export function createServer() {
     }
   });
 
-  app.post("/alerts", async (req, res) => {
+  app.post("/alerts", authenticate, async (req, res) => {
     try {
       const { assetId, type, threshold } = req.body;
 
@@ -374,7 +376,7 @@ export function createServer() {
     }
   });
 
-  app.patch("/alerts/:id/activate", async (req, res) => {
+  app.patch("/alerts/:id/activate", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -397,7 +399,7 @@ export function createServer() {
     }
   });
 
-  app.patch("/alerts/:id/deactivate", async (req, res) => {
+  app.patch("/alerts/:id/deactivate", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -415,7 +417,7 @@ export function createServer() {
     }
   });
 
-  app.delete("/alerts/:id", async (req, res) => {
+  app.delete("/alerts/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -466,7 +468,9 @@ export function createServer() {
   });
 
 
-  app.get("/portfolios", async (_req, res) => {
+  // ==================== PORTFOLIO ROUTES (PROTECTED) ====================
+
+  app.get("/portfolios", authenticate, async (_req, res) => {
     try {
       const portfolios = await getPortfolios();
       res.json({ data: portfolios });
@@ -476,7 +480,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id", async (req, res) => {
+  app.get("/portfolios/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -495,7 +499,7 @@ export function createServer() {
     }
   });
 
-  app.post("/portfolios", async (req, res) => {
+  app.post("/portfolios", authenticate, async (req, res) => {
     try {
       const { name } = req.body;
 
@@ -511,7 +515,7 @@ export function createServer() {
     }
   });
 
-  app.delete("/portfolios/:id", async (req, res) => {
+  app.delete("/portfolios/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -532,7 +536,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id/pnl", async (req, res) => {
+  app.get("/portfolios/:id/pnl", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -551,7 +555,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id/positions", async (req, res) => {
+  app.get("/portfolios/:id/positions", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -571,7 +575,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id/trades", async (req, res) => {
+  app.get("/portfolios/:id/trades", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
@@ -588,7 +592,7 @@ export function createServer() {
     }
   });
 
-  app.post("/portfolios/:id/trades", async (req, res) => {
+  app.post("/portfolios/:id/trades", authenticate, async (req, res) => {
     try {
       const portfolioId = Number(req.params.id);
       if (!Number.isFinite(portfolioId)) {
