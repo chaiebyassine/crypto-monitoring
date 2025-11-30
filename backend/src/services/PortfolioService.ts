@@ -55,29 +55,19 @@ export interface PortfolioPnL {
   };
 }
 
-// ==================== PORTFOLIO CRUD ====================
 
-/**
- * Create a new portfolio
- */
 export async function createPortfolio(name: string) {
   return prisma.portfolio.create({
     data: { name },
   });
 }
 
-/**
- * Get all portfolios
- */
 export async function getPortfolios() {
   return prisma.portfolio.findMany({
     orderBy: { createdAt: "desc" },
   });
 }
 
-/**
- * Get portfolio by ID
- */
 export async function getPortfolio(id: number) {
   return prisma.portfolio.findUnique({
     where: { id },
@@ -88,16 +78,10 @@ export async function getPortfolio(id: number) {
   });
 }
 
-// ==================== TRADE EXECUTION ====================
 
-/**
- * Execute a trade (BUY or SELL)
- * Updates positions and calculates realized PnL for sells
- */
 export async function executeTrade(input: TradeInput): Promise<TradeResult> {
   const { portfolioId, assetId, side, quantity, priceUsd, notes } = input;
 
-  // Validate inputs
   if (quantity <= 0) {
     throw new Error("Quantity must be positive");
   }
@@ -105,7 +89,6 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
     throw new Error("Price must be positive");
   }
 
-  // Verify portfolio exists
   const portfolio = await prisma.portfolio.findUnique({
     where: { id: portfolioId },
   });
@@ -113,7 +96,6 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
     throw new Error("Portfolio not found");
   }
 
-  // Verify asset exists
   const asset = await prisma.asset.findUnique({ where: { id: assetId } });
   if (!asset) {
     throw new Error("Asset not found");
@@ -121,7 +103,6 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
 
   const totalUsd = quantity * priceUsd;
 
-  // Get current position (if exists)
   const existingPosition = await prisma.position.findUnique({
     where: { portfolioId_assetId: { portfolioId, assetId } },
   });
@@ -131,17 +112,14 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
   let newAvgCost: number;
 
   if (side === "buy") {
-    // BUY: Increase position, update weighted average cost
     const currentQty = existingPosition?.quantity ?? 0;
     const currentAvgCost = existingPosition?.avgCost ?? 0;
     const currentTotalCost = currentQty * currentAvgCost;
 
     newQuantity = currentQty + quantity;
-    // Weighted average: (old_qty * old_avg + new_qty * new_price) / total_qty
     newAvgCost =
       newQuantity > 0 ? (currentTotalCost + totalUsd) / newQuantity : priceUsd;
   } else {
-    // SELL: Decrease position, calculate realized PnL
     const currentQty = existingPosition?.quantity ?? 0;
     const currentAvgCost = existingPosition?.avgCost ?? 0;
 
@@ -151,17 +129,13 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
       );
     }
 
-    // Calculate realized PnL: (sell_price - avg_cost) * quantity
     realizedPnl = (priceUsd - currentAvgCost) * quantity;
 
     newQuantity = currentQty - quantity;
-    // Average cost stays the same for remaining position
     newAvgCost = currentAvgCost;
   }
 
-  // Execute in transaction
   const result = await prisma.$transaction(async (tx) => {
-    // Create trade record
     const trade = await tx.trade.create({
       data: {
         portfolioId,
@@ -174,7 +148,6 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
       },
     });
 
-    // Update or create position
     let position;
     if (newQuantity > 0) {
       position = await tx.position.upsert({
@@ -191,7 +164,6 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
         },
       });
     } else {
-      // Position fully closed, delete it
       if (existingPosition) {
         await tx.position.delete({
           where: { id: existingPosition.id },
@@ -221,11 +193,6 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
   };
 }
 
-// ==================== PNL CALCULATIONS ====================
-
-/**
- * Get current price for an asset
- */
 async function getCurrentPrice(assetId: number): Promise<number | null> {
   const snapshot = await prisma.marketSnapshot.findFirst({
     where: { assetId },

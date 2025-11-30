@@ -109,13 +109,11 @@ async function triggerAlert(
 ): Promise<void> {
   const now = new Date();
 
-  // Update alert's lastTriggered timestamp
   await prisma.alert.update({
     where: { id: alert.id },
     data: { lastTriggered: now },
   });
 
-  // Send Discord notification
   const notifyResult = await sendAlertNotification({
     assetName: alert.asset.name,
     assetSymbol: alert.asset.symbol,
@@ -125,7 +123,6 @@ async function triggerAlert(
     change24hPct: latest.change24hPct,
   });
 
-  // Record notification log
   await prisma.notificationLog.create({
     data: {
       alertId: alert.id,
