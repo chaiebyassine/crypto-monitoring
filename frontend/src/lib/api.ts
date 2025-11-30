@@ -1,4 +1,91 @@
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+export type User = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: "USER" | "ADMIN";
+};
+
+export type AuthResponse = {
+  user: User;
+  token: string;
+};
+
+
+let authToken: string | null = localStorage.getItem("token");
+
+export function getToken(): string | null {
+  return authToken;
+}
+
+export function setToken(token: string | null): void {
+  authToken = token;
+  if (token) {
+    localStorage.setItem("token", token);
+  } else {
+    localStorage.removeItem("token");
+  }
+}
+
+export function getStoredUser(): User | null {
+  const stored = localStorage.getItem("user");
+  return stored ? JSON.parse(stored) : null;
+}
+
+export function setStoredUser(user: User | null): void {
+  if (user) {
+    localStorage.setItem("user", JSON.stringify(user));
+  } else {
+    localStorage.removeItem("user");
+  }
+}
+
+function authHeaders(): HeadersInit {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
+
+export async function register(email: string, password: string, name?: string): Promise<AuthResponse> {
+  const r = await fetch(`${BASE}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, name }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Erreur d'inscription");
+  setToken(j.data.token);
+  setStoredUser(j.data.user);
+  return j.data;
+}
+
+export async function login(email: string, password: string): Promise<AuthResponse> {
+  const r = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Email ou mot de passe incorrect");
+  setToken(j.data.token);
+  setStoredUser(j.data.user);
+  return j.data;
+}
+
+export async function fetchMe(): Promise<User> {
+  const r = await fetch(`${BASE}/auth/me`, { headers: authHeaders() });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Non authentifié");
+  return j.data;
+}
+
+export function logout(): void {
+  setToken(null);
+  setStoredUser(null);
+}
+
 
 export type Asset = { id: number; symbol: string; name: string };
 export type PricePoint = { t: string; priceUsd: number };
