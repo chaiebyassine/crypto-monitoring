@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { prisma } from "../repos/prisma.js";
 import { runOnce } from "../services/CollectService.js";
+import { AuthService } from "../services/AuthService.js";
+import { authenticate, authorize } from "../middlewares/auth.js";
 import {
   createAlert,
   deactivateAlert,
@@ -29,6 +31,113 @@ export function createServer() {
   app.use(cors({ origin: true }));
   app.use(express.json());
 
+  // ==================== AUTH ROUTES ====================
+
+  /**
+   * POST /auth/register - Inscription d'un nouvel utilisateur
+   */
+  app.post("/auth/register", async (req, res) => {
+    try {
+      const { email, password, name } = req.body;
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email requis" });
+      }
+      if (!password || typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ error: "Mot de passe requis (min 6 caractères)" });
+      }
+
+      const result = await AuthService.register(email, password, name);
+      res.status(201).json({ data: result });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes("existe déjà")) {
+        return res.status(409).json({ error: message });
+      }
+      res.status(500).json({ error: message });
+    }
+  });
+
+  /**
+   * POST /auth/login - Connexion d'un utilisateur
+   */
+  app.post("/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email requis" });
+      }
+      if (!password || typeof password !== "string") {
+        return res.status(400).json({ error: "Mot de passe requis" });
+      }
+
+      const result = await AuthService.login(email, password);
+      res.json({ data: result });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(401).json({ error: message });
+    }
+  });
+
+  /**
+   * GET /auth/me - Récupérer le profil de l'utilisateur connecté
+   */
+  app.get("/auth/me", authenticate, async (req, res) => {
+    try {
+      const user = await AuthService.getUserById(req.user!.userId);
+      res.json({ data: user });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(404).json({ error: message });
+    }
+  });
+
+  /**
+   * PATCH /auth/password - Changer le mot de passe
+   */
+  app.patch("/auth/password", authenticate, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || typeof currentPassword !== "string") {
+        return res.status(400).json({ error: "Mot de passe actuel requis" });
+      }
+      if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+        return res.status(400).json({ error: "Nouveau mot de passe requis (min 6 caractères)" });
+      }
+
+      await AuthService.updatePassword(req.user!.userId, currentPassword, newPassword);
+      res.json({ ok: true, message: "Mot de passe mis à jour" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(400).json({ error: message });
+    }
+  });
+
+  /**
+   * GET /auth/users - Liste des utilisateurs (ADMIN uniquement)
+   */
+  app.get("/auth/users", authenticate, authorize("ADMIN"), async (_req, res) => {
+    try {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      res.json({ data: users });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ==================== PUBLIC ROUTES ====================
 
   app.get("/", (_req, res) => {
     res.type("text").send("Backend OK. Try /health, POST /collect, GET /assets, GET /prices");
@@ -184,7 +293,9 @@ export function createServer() {
   });
 
 
-  app.get("/alerts", async (req, res) => {
+  // ==================== ALERT ROUTES (PROTECTED) ====================
+
+  app.get("/alerts", authenticate, async (req, res) => {
     try {
       const assetId = req.query.assetId ? Number(req.query.assetId) : null;
       const activeOnly = req.query.active === "true";
@@ -209,7 +320,7 @@ export function createServer() {
     }
   });
 
-  app.get("/alerts/:id", async (req, res) => {
+  app.get("/alerts/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -235,7 +346,7 @@ export function createServer() {
     }
   });
 
-  app.post("/alerts", async (req, res) => {
+  app.post("/alerts", authenticate, async (req, res) => {
     try {
       const { assetId, type, threshold } = req.body;
 
@@ -265,7 +376,7 @@ export function createServer() {
     }
   });
 
-  app.patch("/alerts/:id/activate", async (req, res) => {
+  app.patch("/alerts/:id/activate", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -288,7 +399,7 @@ export function createServer() {
     }
   });
 
-  app.patch("/alerts/:id/deactivate", async (req, res) => {
+  app.patch("/alerts/:id/deactivate", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -306,7 +417,7 @@ export function createServer() {
     }
   });
 
-  app.delete("/alerts/:id", async (req, res) => {
+  app.delete("/alerts/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -357,7 +468,9 @@ export function createServer() {
   });
 
 
-  app.get("/portfolios", async (_req, res) => {
+  // ==================== PORTFOLIO ROUTES (PROTECTED) ====================
+
+  app.get("/portfolios", authenticate, async (_req, res) => {
     try {
       const portfolios = await getPortfolios();
       res.json({ data: portfolios });
@@ -367,7 +480,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id", async (req, res) => {
+  app.get("/portfolios/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -386,7 +499,7 @@ export function createServer() {
     }
   });
 
-  app.post("/portfolios", async (req, res) => {
+  app.post("/portfolios", authenticate, async (req, res) => {
     try {
       const { name } = req.body;
 
@@ -402,7 +515,7 @@ export function createServer() {
     }
   });
 
-  app.delete("/portfolios/:id", async (req, res) => {
+  app.delete("/portfolios/:id", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -423,7 +536,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id/pnl", async (req, res) => {
+  app.get("/portfolios/:id/pnl", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -442,7 +555,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id/positions", async (req, res) => {
+  app.get("/portfolios/:id/positions", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
@@ -462,7 +575,7 @@ export function createServer() {
     }
   });
 
-  app.get("/portfolios/:id/trades", async (req, res) => {
+  app.get("/portfolios/:id/trades", authenticate, async (req, res) => {
     try {
       const id = Number(req.params.id);
       const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
@@ -479,7 +592,7 @@ export function createServer() {
     }
   });
 
-  app.post("/portfolios/:id/trades", async (req, res) => {
+  app.post("/portfolios/:id/trades", authenticate, async (req, res) => {
     try {
       const portfolioId = Number(req.params.id);
       if (!Number.isFinite(portfolioId)) {
