@@ -87,6 +87,171 @@ export function logout(): void {
 }
 
 
+// Mode mock pour tester sans backend auth (à désactiver en prod)
+const USE_MOCK_AUTH = true;
+
+// ===== Auth Types =====
+export type User = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: "USER" | "ADMIN";
+};
+
+export type AuthResponse = {
+  user: User;
+  token: string;
+};
+
+// ===== Token Management =====
+let authToken: string | null = localStorage.getItem("token");
+
+export function getToken(): string | null {
+  return authToken;
+}
+
+export function setToken(token: string | null): void {
+  authToken = token;
+  if (token) {
+    localStorage.setItem("token", token);
+  } else {
+    localStorage.removeItem("token");
+  }
+}
+
+export function getStoredUser(): User | null {
+  const stored = localStorage.getItem("user");
+  return stored ? JSON.parse(stored) : null;
+}
+
+export function setStoredUser(user: User | null): void {
+  if (user) {
+    localStorage.setItem("user", JSON.stringify(user));
+  } else {
+    localStorage.removeItem("user");
+  }
+}
+
+function authHeaders(): HeadersInit {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  return headers;
+}
+
+// ===== Mock Auth Storage =====
+function getMockUsers(): Array<{ email: string; password: string; name: string | null }> {
+  const stored = localStorage.getItem("mockUsers");
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveMockUser(email: string, password: string, name: string | null): void {
+  const users = getMockUsers();
+  users.push({ email, password, name });
+  localStorage.setItem("mockUsers", JSON.stringify(users));
+}
+
+// ===== Auth Functions =====
+export async function register(email: string, password: string, name?: string): Promise<AuthResponse> {
+  if (USE_MOCK_AUTH) {
+    // Mode mock : simuler l'inscription localement
+    const users = getMockUsers();
+    if (users.find(u => u.email === email)) {
+      throw new Error("Cet email est déjà utilisé");
+    }
+    
+    const user: User = {
+      id: Date.now(),
+      email,
+      name: name || null,
+      role: "USER",
+    };
+    const token = `mock-token-${Date.now()}`;
+    
+    saveMockUser(email, password, name || null);
+    setToken(token);
+    setStoredUser(user);
+    
+    return { user, token };
+  }
+
+  const r = await fetch(`${BASE}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, name }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Erreur d'inscription");
+  setToken(j.data.token);
+  setStoredUser(j.data.user);
+  return j.data;
+}
+
+export async function login(email: string, password: string): Promise<AuthResponse> {
+  if (USE_MOCK_AUTH) {
+    // Mode mock : simuler la connexion localement
+    const users = getMockUsers();
+    const found = users.find(u => u.email === email && u.password === password);
+    
+    if (!found) {
+      throw new Error("Email ou mot de passe incorrect");
+    }
+    
+    const user: User = {
+      id: Date.now(),
+      email: found.email,
+      name: found.name,
+      role: "USER",
+    };
+    const token = `mock-token-${Date.now()}`;
+    
+    setToken(token);
+    setStoredUser(user);
+    
+    return { user, token };
+  }
+
+  const r = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Identifiants invalides");
+  setToken(j.data.token);
+  setStoredUser(j.data.user);
+  return j.data;
+}
+
+export async function fetchMe(): Promise<User> {
+  if (USE_MOCK_AUTH) {
+    // Mode mock : retourner l'utilisateur stocké
+    const user = getStoredUser();
+    if (!user || !getToken()) {
+      throw new Error("Non authentifié");
+    }
+    return user;
+  }
+
+  const r = await fetch(`${BASE}/auth/me`, {
+    headers: authHeaders(),
+  });
+  const j = await r.json();
+  if (!r.ok) {
+    setToken(null);
+    setStoredUser(null);
+    throw new Error(j.error || "Non authentifié");
+  }
+  return j.data;
+}
+
+export function logout(): void {
+  setToken(null);
+  setStoredUser(null);
+}
+
+// ===== Data Types =====
 export type Asset = { id: number; symbol: string; name: string };
 export type PricePoint = { t: string; priceUsd: number };
 

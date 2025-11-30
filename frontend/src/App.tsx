@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import { useMarketData } from "./hooks/useMarketData";
@@ -15,17 +14,17 @@ import PortfolioPanel from "./components/PortfolioPanel";
 import "./App.css";
 import CandlestickChart from "./components/CandlestickChart";
 import { fetchOhlc, type OhlcPoint } from "./lib/api";
-
+import { useAuth } from "./contexts/AuthContext";
+import LoginPage from "./components/LoginPage";
 type Tab = "dashboard" | "forecast" | "alerts" | "portfolio";
 
-
-
-
 export default function App() {
- const [ohlcData, setOhlcData] = useState<OhlcPoint[]>([]);
- const [ohlcLoading, setOhlcLoading] = useState(false);
- const [ohlcError, setOhlcError] = useState<string | null>(null);
- const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const { user, loading: authLoading, logout } = useAuth();
+  
+  const [ohlcData, setOhlcData] = useState<OhlcPoint[]>([]);
+  const [ohlcLoading, setOhlcLoading] = useState(false);
+  const [ohlcError, setOhlcError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
 
   
 
@@ -81,6 +80,21 @@ export default function App() {
         : pctChange(dataCompare)
       : null;
 
+  // Afficher un loader pendant la vérification de l'auth
+  if (authLoading) {
+    return (
+      <div className="app">
+        <div className="loading" style={{ marginTop: "20vh", textAlign: "center" }}>
+          Chargement...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -115,6 +129,12 @@ export default function App() {
             Portfolio
           </button>
         </nav>
+        <div className="user-info">
+          <span className="user-name">👤 {user.name || user.email}</span>
+          <button className="logout-btn" onClick={logout}>
+            Déconnexion
+          </button>
+        </div>
       </header>
 
       <main className="app-content">
