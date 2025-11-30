@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useMarketData } from "./hooks/useMarketData";
 import { buildChartData } from "./utils/series";
@@ -14,7 +14,7 @@ import ForecastChart from "./components/ForecastChart";
 import PortfolioPanel from "./components/PortfolioPanel";
 import "./App.css";
 import CandlestickChart from "./components/CandlestickChart";
-        import { fetchOhlc, type OhlcPoint } from "./lib/api";
+import { fetchOhlc, type OhlcPoint } from "./lib/api";
 
 type Tab = "dashboard" | "forecast" | "alerts" | "portfolio";
 
@@ -131,6 +131,7 @@ export default function App() {
               emaWin={emaWin}
               normalize={normalize}
               loading={loading}
+              chartMode={chartMode}
               onChange={(p) => {
                 if (p.symbol !== undefined) setSymbol(p.symbol);
                 if (p.compare !== undefined) setCompare(p.compare);
@@ -140,6 +141,7 @@ export default function App() {
                 if (p.showEMA !== undefined) setShowEMA(p.showEMA);
                 if (p.emaWin !== undefined) setEmaWin(p.emaWin);
                 if (p.normalize !== undefined) setNormalize(p.normalize);
+                if (p.chartMode !== undefined) setChartMode(p.chartMode);
               }}
             />
 
@@ -155,7 +157,8 @@ export default function App() {
             {err && <div className="error-message">Error: {err}</div>}
             {loading && <div className="loading">Loading data...</div>}
 
-            {!loading && !err && chartData.length > 0 && (
+            {/* Mode Courbe classique */}
+            {!loading && !err && chartData.length > 0 && chartMode === "line" && (
               <CryptoChart
                 data={chartData}
                 symbol={symbol}
@@ -167,6 +170,17 @@ export default function App() {
                 showEMA={showEMA}
               />
             )}
+
+            {/* Mode Chandeliers (OHLC) */}
+            {chartMode === "ohlc" && (
+              <div className="chart-container">
+                {ohlcError && <div className="error-message">Erreur : {ohlcError}</div>}
+                {ohlcLoading && <div className="loading">Chargement OHLC...</div>}
+                {!ohlcLoading && !ohlcError && ohlcData.length > 0 && (
+                  <CandlestickChart data={ohlcData} />
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -174,84 +188,6 @@ export default function App() {
         {activeTab === "alerts" && <AlertsPanel />}
         {activeTab === "portfolio" && <PortfolioPanel />}
       </main>
-      <div className="content">
-        <div className="header-main">
-          <div className="title-area">
-            <h1>Crypto Dashboard</h1>
-            <div className="subtitle">Live prices · Simple demo</div>
-          </div>
-          <PriceBadges
-            lastPrice={lastPrice}
-            lastTime={lastTime}
-            symbol={symbol}
-            compare={compare || undefined}
-            pctPrimary={pctPrimary}
-            pctCompareVal={pctCompareVal}
-          />
-        </div>
-
-        <div className="controls-card">
-          <Controls
-        assets={assets}
-        symbol={symbol}
-        compare={compare}
-        limit={limit}
-        showSMA={showSMA}
-        smaWin={smaWin}
-        showEMA={showEMA}
-        emaWin={emaWin}
-        normalize={normalize}
-        loading={loading}
-        chartMode={chartMode} 
-        onChange={(p) => {
-          if (p.symbol !== undefined) setSymbol(p.symbol);
-          if (p.compare !== undefined) setCompare(p.compare);
-          if (p.limit !== undefined) setLimit(p.limit);
-          if (p.showSMA !== undefined) setShowSMA(p.showSMA);
-          if (p.smaWin !== undefined) setSmaWin(p.smaWin);
-          if (p.showEMA !== undefined) setShowEMA(p.showEMA);
-          if (p.emaWin !== undefined) setEmaWin(p.emaWin);
-          if (p.normalize !== undefined) setNormalize(p.normalize);
-          if (p.chartMode !== undefined) setChartMode(p.chartMode);
-        }}
-          />
-        </div>
-
-      </div>
-
-      {err && <div className="error-message">Erreur : {err}</div>}
-      {loading && <div className="loading">Chargement...</div>}
-
-            {/* Mode Courbe classique */}
-      {!loading && !err && chartData.length > 0 && chartMode === "line" && (
-        <div className="main-card">
-          <div className="chart-container">
-            <CryptoChart
-              data={chartData}
-              symbol={symbol}
-              compare={compare || undefined}
-              normalize={normalize}
-              leftDomain={leftDomain}
-              rightDomain={rightDomain}
-              showSMA={showSMA}
-              showEMA={showEMA}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Mode Chandeliers (OHLC) */}
-      {chartMode === "ohlc" && (
-        <div className="main-card">
-          <div className="chart-container">
-            {ohlcError && <div className="error-message">Erreur : {ohlcError}</div>}
-            {ohlcLoading && <div className="loading">Chargement OHLC...</div>}
-            {!ohlcLoading && !ohlcError && ohlcData.length > 0 && (
-              <CandlestickChart data={ohlcData} />
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

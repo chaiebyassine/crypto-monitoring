@@ -194,6 +194,9 @@ export async function fetchPortfolioPnL(portfolioId: number): Promise<PortfolioP
 export async function fetchPositions(portfolioId: number): Promise<Position[]> {
   const r = await fetch(`${BASE}/portfolios/${portfolioId}/positions`);
   if (!r.ok) throw new Error("Failed /positions");
+  const j = await r.json();
+  return j.data ?? [];
+}
 
 export type OhlcPoint = {
   t: string;
