@@ -1,96 +1,66 @@
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-export type User = {
-  id: number;
-  email: string;
-  name: string | null;
-  role: "USER" | "ADMIN";
-};
 
-export type AuthResponse = {
-  user: User;
-  token: string;
-};
-
-
-let authToken: string | null = localStorage.getItem("token");
-
-export function getToken(): string | null {
-  return authToken;
-}
-
-export function setToken(token: string | null): void {
-  authToken = token;
-  if (token) {
-    localStorage.setItem("token", token);
-  } else {
-    localStorage.removeItem("token");
-  }
-}
-
-export function getStoredUser(): User | null {
-  const stored = localStorage.getItem("user");
-  return stored ? JSON.parse(stored) : null;
-}
-
-export function setStoredUser(user: User | null): void {
-  if (user) {
-    localStorage.setItem("user", JSON.stringify(user));
-  } else {
-    localStorage.removeItem("user");
-  }
-}
-
-function authHeaders(): HeadersInit {
-  const headers: HeadersInit = { "Content-Type": "application/json" };
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-  return headers;
-}
-
-export async function register(email: string, password: string, name?: string): Promise<AuthResponse> {
-  const r = await fetch(`${BASE}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
-  });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Erreur d'inscription");
-  setToken(j.data.token);
-  setStoredUser(j.data.user);
-  return j.data;
-}
-
-export async function login(email: string, password: string): Promise<AuthResponse> {
-  const r = await fetch(`${BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Email ou mot de passe incorrect");
-  setToken(j.data.token);
-  setStoredUser(j.data.user);
-  return j.data;
-}
-
-export async function fetchMe(): Promise<User> {
-  const r = await fetch(`${BASE}/auth/me`, { headers: authHeaders() });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Non authentifié");
-  return j.data;
-}
-
-export function logout(): void {
-  setToken(null);
-  setStoredUser(null);
-}
-
-
-// Mode mock pour tester sans backend auth (à désactiver en prod)
 const USE_MOCK_AUTH = true;
+const USE_MOCK_DATA = false; 
+const FALLBACK_TO_MOCK = true; 
 
-// ===== Auth Types =====
+
+const MOCK_ASSETS: Asset[] = [
+  { id: 1, symbol: "bitcoin", name: "Bitcoin" },
+  { id: 2, symbol: "ethereum", name: "Ethereum" },
+  { id: 3, symbol: "cardano", name: "Cardano" },
+  { id: 4, symbol: "solana", name: "Solana" },
+  { id: 5, symbol: "polkadot", name: "Polkadot" },
+];
+
+function generateMockPrices(symbol: string, count: number): PricePoint[] {
+  const basePrices: Record<string, number> = {
+    bitcoin: 95000,
+    ethereum: 3500,
+    cardano: 0.95,
+    solana: 230,
+    polkadot: 8.5,
+  };
+  const base = basePrices[symbol] || 100;
+  const now = Date.now();
+  return Array.from({ length: count }, (_, i) => ({
+    t: new Date(now - (count - i) * 3600000).toISOString(),
+    priceUsd: base * (1 + (Math.random() - 0.5) * 0.1),
+  }));
+}
+
+function generateMockChanges() {
+  return MOCK_ASSETS.map(a => ({
+    symbol: a.symbol,
+    name: a.name,
+    last: a.symbol === "bitcoin" ? 95000 : a.symbol === "ethereum" ? 3500 : Math.random() * 100,
+    change24hPct: (Math.random() - 0.5) * 10,
+  }));
+}
+
+function generateMockOhlc(symbol: string): OhlcPoint[] {
+  const basePrices: Record<string, number> = {
+    bitcoin: 95000,
+    ethereum: 3500,
+    cardano: 0.95,
+    solana: 230,
+    polkadot: 8.5,
+  };
+  const base = basePrices[symbol] || 100;
+  const now = Date.now();
+  return Array.from({ length: 24 }, (_, i) => {
+    const open = base * (1 + (Math.random() - 0.5) * 0.05);
+    const close = base * (1 + (Math.random() - 0.5) * 0.05);
+    const high = Math.max(open, close) * (1 + Math.random() * 0.02);
+    const low = Math.min(open, close) * (1 - Math.random() * 0.02);
+    return {
+      t: new Date(now - (24 - i) * 3600000).toISOString(),
+      open, high, low, close,
+      volume: Math.random() * 1000000,
+    };
+  });
+}
+
 export type User = {
   id: number;
   email: string;
@@ -103,7 +73,6 @@ export type AuthResponse = {
   token: string;
 };
 
-// ===== Token Management =====
 let authToken: string | null = localStorage.getItem("token");
 
 export function getToken(): string | null {
@@ -140,7 +109,6 @@ function authHeaders(): HeadersInit {
   return headers;
 }
 
-// ===== Mock Auth Storage =====
 function getMockUsers(): Array<{ email: string; password: string; name: string | null }> {
   const stored = localStorage.getItem("mockUsers");
   return stored ? JSON.parse(stored) : [];
@@ -152,10 +120,8 @@ function saveMockUser(email: string, password: string, name: string | null): voi
   localStorage.setItem("mockUsers", JSON.stringify(users));
 }
 
-// ===== Auth Functions =====
 export async function register(email: string, password: string, name?: string): Promise<AuthResponse> {
   if (USE_MOCK_AUTH) {
-    // Mode mock : simuler l'inscription localement
     const users = getMockUsers();
     if (users.find(u => u.email === email)) {
       throw new Error("Cet email est déjà utilisé");
@@ -190,7 +156,6 @@ export async function register(email: string, password: string, name?: string): 
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
   if (USE_MOCK_AUTH) {
-    // Mode mock : simuler la connexion localement
     const users = getMockUsers();
     const found = users.find(u => u.email === email && u.password === password);
     
@@ -218,7 +183,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
     body: JSON.stringify({ email, password }),
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Identifiants invalides");
+  if (!r.ok) throw new Error(j.error || "Email ou mot de passe incorrect");
   setToken(j.data.token);
   setStoredUser(j.data.user);
   return j.data;
@@ -226,7 +191,6 @@ export async function login(email: string, password: string): Promise<AuthRespon
 
 export async function fetchMe(): Promise<User> {
   if (USE_MOCK_AUTH) {
-    // Mode mock : retourner l'utilisateur stocké
     const user = getStoredUser();
     if (!user || !getToken()) {
       throw new Error("Non authentifié");
@@ -234,9 +198,7 @@ export async function fetchMe(): Promise<User> {
     return user;
   }
 
-  const r = await fetch(`${BASE}/auth/me`, {
-    headers: authHeaders(),
-  });
+  const r = await fetch(`${BASE}/auth/me`, { headers: authHeaders() });
   const j = await r.json();
   if (!r.ok) {
     setToken(null);
@@ -338,24 +300,70 @@ export type PortfolioPnL = {
   };
 };
 
+export type OhlcPoint = {
+  t: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number | null;
+};
+
+// ===== API Functions =====
 export async function fetchAssets(): Promise<Asset[]> {
-  const r = await fetch(`${BASE}/assets`);
-  if (!r.ok) throw new Error("Failed /assets");
-  const j = await r.json();
-  return j.data ?? [];
+  if (USE_MOCK_DATA) {
+    console.log("[MOCK] fetchAssets");
+    return MOCK_ASSETS;
+  }
+  try {
+    const r = await fetch(`${BASE}/assets`);
+    if (!r.ok) throw new Error("Failed /assets");
+    const j = await r.json();
+    return j.data ?? [];
+  } catch (e) {
+    if (FALLBACK_TO_MOCK) {
+      console.warn("[FALLBACK] fetchAssets - using mock data:", e);
+      return MOCK_ASSETS;
+    }
+    throw e;
+  }
 }
 
 export async function fetchPrices(symbol: string, limit = 50): Promise<PricePoint[]> {
-  const r = await fetch(`${BASE}/prices?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
-  if (!r.ok) throw new Error("Failed /prices");
-  const j = await r.json();
-  return (j.data ?? []).map((d: any) => ({ t: d.t, priceUsd: d.priceUsd }));
+  if (USE_MOCK_DATA) {
+    console.log("[MOCK] fetchPrices:", symbol);
+    return generateMockPrices(symbol, limit);
+  }
+  try {
+    const r = await fetch(`${BASE}/prices?symbol=${encodeURIComponent(symbol)}&limit=${limit}`);
+    if (!r.ok) throw new Error("Failed /prices");
+    const j = await r.json();
+    return (j.data ?? []).map((d: any) => ({ t: d.t, priceUsd: d.priceUsd }));
+  } catch (e) {
+    if (FALLBACK_TO_MOCK) {
+      console.warn("[FALLBACK] fetchPrices - using mock data:", e);
+      return generateMockPrices(symbol, limit);
+    }
+    throw e;
+  }
 }
 
 export async function fetchChanges(): Promise<{symbol: string; name: string; last: number | null; change24hPct: number | null}[]> {
-  const r = await fetch(`${BASE}/changes`);
-  const j = await r.json();
-  return j.data ?? [];
+  if (USE_MOCK_DATA) {
+    console.log("[MOCK] fetchChanges");
+    return generateMockChanges();
+  }
+  try {
+    const r = await fetch(`${BASE}/changes`);
+    const j = await r.json();
+    return j.data ?? [];
+  } catch (e) {
+    if (FALLBACK_TO_MOCK) {
+      console.warn("[FALLBACK] fetchChanges - using mock data:", e);
+      return generateMockChanges();
+    }
+    throw e;
+  }
 }
 
 export async function fetchAlerts(): Promise<Alert[]> {
@@ -450,38 +458,36 @@ export async function fetchPositions(portfolioId: number): Promise<Position[]> {
   return j.data ?? [];
 }
 
-export type OhlcPoint = {
-  t: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume?: number | null;
-};
-
 export async function fetchOhlc(
   symbol: string,
   granularity: string = "1h"
 ): Promise<OhlcPoint[]> {
-  const r = await fetch(
-    `${BASE}/prices/ohlc?symbol=${encodeURIComponent(
-      symbol
-    )}&granularity=${encodeURIComponent(granularity)}`
-  );
-  if (!r.ok) {
-    throw new Error("Failed /prices/ohlc");
+  if (USE_MOCK_DATA) {
+    console.log("[MOCK] fetchOhlc:", symbol);
+    return generateMockOhlc(symbol);
   }
-  const j = await r.json();
-  return (j.data ?? []).map((d: any) => ({
-    t: d.t,
-    open: d.open,
-    high: d.high,
-    low: d.low,
-    close: d.close,
-    volume: d.volume ?? d.volumeUsd ?? null,
-  }));
+  try {
+    const r = await fetch(
+      `${BASE}/prices/ohlc?symbol=${encodeURIComponent(symbol)}&granularity=${encodeURIComponent(granularity)}`
+    );
+    if (!r.ok) throw new Error("Failed /prices/ohlc");
+    const j = await r.json();
+    return (j.data ?? []).map((d: any) => ({
+      t: d.t,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+      volume: d.volume ?? d.volumeUsd ?? null,
+    }));
+  } catch (e) {
+    if (FALLBACK_TO_MOCK) {
+      console.warn("[FALLBACK] fetchOhlc - using mock data:", e);
+      return generateMockOhlc(symbol);
+    }
+    throw e;
+  }
 }
-
 
 export async function fetchTrades(portfolioId: number, limit = 20): Promise<Trade[]> {
   const r = await fetch(`${BASE}/portfolios/${portfolioId}/trades?limit=${limit}`);
