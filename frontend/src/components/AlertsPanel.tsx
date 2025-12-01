@@ -12,10 +12,10 @@ import {
 } from "../lib/api";
 
 const ALERT_TYPES: { value: AlertType; label: string; icon: string }[] = [
-  { value: "price_above", label: "Price Above", icon: "📈" },
-  { value: "price_below", label: "Price Below", icon: "📉" },
-  { value: "change_above", label: "24h Change Above", icon: "🚀" },
-  { value: "change_below", label: "24h Change Below", icon: "⚠️" },
+  { value: "price_above", label: "Prix supérieur à", icon: "📈" },
+  { value: "price_below", label: "Prix inférieur à", icon: "📉" },
+  { value: "change_above", label: "Variation 24h supérieure à", icon: "🚀" },
+  { value: "change_below", label: "Variation 24h inférieure à", icon: "⚠️" },
 ];
 
 export default function AlertsPanel() {
@@ -86,7 +86,7 @@ export default function AlertsPanel() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this alert?")) return;
+    if (!confirm("Supprimer cette alerte ?")) return;
     try {
       await deleteAlert(id);
       setAlerts(alerts.filter((a) => a.id !== id));
@@ -109,7 +109,7 @@ export default function AlertsPanel() {
   if (loading) {
     return (
       <div className="panel">
-        <div className="panel-loading">Loading alerts...</div>
+        <div className="panel-loading">Chargement des alertes...</div>
       </div>
     );
   }
@@ -119,25 +119,25 @@ export default function AlertsPanel() {
       <div className="panel-header">
         <h2 className="panel-title">
           <span className="panel-icon">🔔</span>
-          Price Alerts
+          Alertes de Prix
         </h2>
-        <span className="panel-badge">{alerts.length} alerts</span>
+        <span className="panel-badge">{alerts.length} alertes</span>
       </div>
 
       {error && <div className="panel-error">{error}</div>}
 
-      {/* Create Alert Form */}
+      {/* Formulaire Nouvelle Alerte */}
       <form className="alert-form" onSubmit={handleCreate}>
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Asset</label>
+            <label className="form-label">Crypto</label>
             <select
               className="form-select"
               value={selectedAssetId}
               onChange={(e) => setSelectedAssetId(e.target.value ? Number(e.target.value) : "")}
               required
             >
-              <option value="">Select asset...</option>
+              <option value="">Choisir une crypto...</option>
               {assets.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name} ({a.symbol.toUpperCase()})
@@ -163,12 +163,12 @@ export default function AlertsPanel() {
 
           <div className="form-group">
             <label className="form-label">
-              {alertType.includes("price") ? "Price (USD)" : "Percentage"}
+              {alertType.includes("price") ? "Prix (USD)" : "Pourcentage"}
             </label>
             <input
               type="number"
               className="form-input"
-              placeholder={alertType.includes("price") ? "e.g. 50000" : "e.g. 5"}
+              placeholder={alertType.includes("price") ? "ex: 50000" : "ex: 5"}
               value={threshold}
               onChange={(e) => setThreshold(e.target.value)}
               step="any"
@@ -178,18 +178,18 @@ export default function AlertsPanel() {
 
           <div className="form-group form-group-btn">
             <button type="submit" className="btn btn-primary" disabled={creating}>
-              {creating ? "Creating..." : "Create Alert"}
+              {creating ? "Création..." : "Créer Alerte"}
             </button>
           </div>
         </div>
       </form>
 
-      {/* Alerts List */}
+      {/* Liste des Alertes */}
       <div className="alerts-list">
         {alerts.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">🔕</span>
-            <p>No alerts yet. Create one above to get started!</p>
+            <p>Aucune alerte. Créez-en une pour commencer !</p>
           </div>
         ) : (
           alerts.map((alert) => {
@@ -210,7 +210,7 @@ export default function AlertsPanel() {
                     </div>
                     {alert.lastTriggered && (
                       <div className="alert-card-meta">
-                        Last triggered: {new Date(alert.lastTriggered).toLocaleString()}
+                        Dernière alerte : {new Date(alert.lastTriggered).toLocaleString()}
                       </div>
                     )}
                   </div>
@@ -220,14 +220,14 @@ export default function AlertsPanel() {
                   <button
                     className={`btn-toggle ${alert.isActive ? "on" : "off"}`}
                     onClick={() => handleToggle(alert)}
-                    title={alert.isActive ? "Deactivate" : "Activate"}
+                    title={alert.isActive ? "Désactiver" : "Activer"}
                   >
                     {alert.isActive ? "ON" : "OFF"}
                   </button>
                   <button
                     className="btn-icon btn-danger"
                     onClick={() => handleDelete(alert.id)}
-                    title="Delete alert"
+                    title="Supprimer l'alerte"
                   >
                     🗑️
                   </button>

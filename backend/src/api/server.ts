@@ -297,21 +297,19 @@ export function createServer() {
 
   app.get("/alerts", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const assetId = req.query.assetId ? Number(req.query.assetId) : null;
       const activeOnly = req.query.active === "true";
 
-      let alerts;
-      if (assetId) {
-        alerts = await getAlertsByAsset(assetId);
-        if (activeOnly) alerts = alerts.filter((a) => a.isActive);
-      } else if (activeOnly) {
-        alerts = await getActiveAlerts();
-      } else {
-        alerts = await prisma.alert.findMany({
-          include: { asset: true },
-          orderBy: { createdAt: "desc" },
-        });
-      }
+      const where: { userId: number; assetId?: number; isActive?: boolean } = { userId };
+      if (assetId) where.assetId = assetId;
+      if (activeOnly) where.isActive = true;
+
+      const alerts = await prisma.alert.findMany({
+        where,
+        include: { asset: true },
+        orderBy: { createdAt: "desc" },
+      });
 
       res.json({ data: alerts });
     } catch (e: unknown) {
@@ -322,6 +320,7 @@ export function createServer() {
 
   app.get("/alerts/:id", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid alert ID" });
@@ -335,7 +334,7 @@ export function createServer() {
         },
       });
 
-      if (!alert) {
+      if (!alert || alert.userId !== userId) {
         return res.status(404).json({ error: "Alert not found" });
       }
 
@@ -348,6 +347,7 @@ export function createServer() {
 
   app.post("/alerts", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const { assetId, type, threshold } = req.body;
 
       if (!Number.isFinite(assetId)) {
@@ -368,7 +368,10 @@ export function createServer() {
         return res.status(404).json({ error: "Asset not found" });
       }
 
-      const alert = await createAlert(assetId, type, threshold);
+      const alert = await prisma.alert.create({
+        data: { assetId, userId, type, threshold },
+        include: { asset: true },
+      });
       res.status(201).json({ data: alert });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -378,9 +381,16 @@ export function createServer() {
 
   app.patch("/alerts/:id/activate", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      // Vérifier ownership
+      const existing = await prisma.alert.findUnique({ where: { id } });
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Alert not found" });
       }
 
       const alert = await prisma.alert.update({
@@ -401,9 +411,16 @@ export function createServer() {
 
   app.patch("/alerts/:id/deactivate", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      // Vérifier ownership
+      const existing = await prisma.alert.findUnique({ where: { id } });
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Alert not found" });
       }
 
       const alert = await deactivateAlert(id);
@@ -419,9 +436,16 @@ export function createServer() {
 
   app.delete("/alerts/:id", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid alert ID" });
+      }
+
+      // Vérifier ownership
+      const existing = await prisma.alert.findUnique({ where: { id } });
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Alert not found" });
       }
 
       await prisma.notificationLog.deleteMany({ where: { alertId: id } });
@@ -470,9 +494,13 @@ export function createServer() {
 
   // ==================== PORTFOLIO ROUTES (PROTECTED) ====================
 
-  app.get("/portfolios", authenticate, async (_req, res) => {
+  app.get("/portfolios", authenticate, async (req, res) => {
     try {
-      const portfolios = await getPortfolios();
+      const userId = req.user!.userId;
+      const portfolios = await prisma.portfolio.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      });
       res.json({ data: portfolios });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -482,13 +510,17 @@ export function createServer() {
 
   app.get("/portfolios/:id", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid portfolio ID" });
       }
 
-      const portfolio = await getPortfolio(id);
-      if (!portfolio) {
+      const portfolio = await prisma.portfolio.findUnique({
+        where: { id },
+        include: { positions: { include: { asset: true } } },
+      });
+      if (!portfolio || portfolio.userId !== userId) {
         return res.status(404).json({ error: "Portfolio not found" });
       }
 
@@ -501,13 +533,16 @@ export function createServer() {
 
   app.post("/portfolios", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const { name } = req.body;
 
       if (!name || typeof name !== "string" || name.trim().length === 0) {
         return res.status(400).json({ error: "name is required" });
       }
 
-      const portfolio = await createPortfolio(name.trim());
+      const portfolio = await prisma.portfolio.create({
+        data: { name: name.trim(), userId },
+      });
       res.status(201).json({ data: portfolio });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -517,9 +552,16 @@ export function createServer() {
 
   app.delete("/portfolios/:id", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      // Vérifier ownership
+      const existing = await prisma.portfolio.findUnique({ where: { id } });
+      if (!existing || existing.userId !== userId) {
+        return res.status(404).json({ error: "Portfolio not found" });
       }
 
       await prisma.trade.deleteMany({ where: { portfolioId: id } });
@@ -538,9 +580,16 @@ export function createServer() {
 
   app.get("/portfolios/:id/pnl", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      // Vérifier ownership
+      const portfolio = await prisma.portfolio.findUnique({ where: { id } });
+      if (!portfolio || portfolio.userId !== userId) {
+        return res.status(404).json({ error: "Portfolio not found" });
       }
 
       const pnl = await getPortfolioPnL(id);
@@ -557,9 +606,16 @@ export function createServer() {
 
   app.get("/portfolios/:id/positions", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      // Vérifier ownership
+      const portfolio = await prisma.portfolio.findUnique({ where: { id } });
+      if (!portfolio || portfolio.userId !== userId) {
+        return res.status(404).json({ error: "Portfolio not found" });
       }
 
       const positions = await prisma.position.findMany({
@@ -577,11 +633,18 @@ export function createServer() {
 
   app.get("/portfolios/:id/trades", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const id = Number(req.params.id);
       const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
 
       if (!Number.isFinite(id)) {
         return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      // Vérifier ownership
+      const portfolio = await prisma.portfolio.findUnique({ where: { id } });
+      if (!portfolio || portfolio.userId !== userId) {
+        return res.status(404).json({ error: "Portfolio not found" });
       }
 
       const trades = await getTradeHistory(id, limit);
@@ -594,9 +657,16 @@ export function createServer() {
 
   app.post("/portfolios/:id/trades", authenticate, async (req, res) => {
     try {
+      const userId = req.user!.userId;
       const portfolioId = Number(req.params.id);
       if (!Number.isFinite(portfolioId)) {
         return res.status(400).json({ error: "Invalid portfolio ID" });
+      }
+
+      // Vérifier ownership
+      const portfolio = await prisma.portfolio.findUnique({ where: { id: portfolioId } });
+      if (!portfolio || portfolio.userId !== userId) {
+        return res.status(404).json({ error: "Portfolio not found" });
       }
 
       const { assetId, side, quantity, priceUsd, notes } = req.body;

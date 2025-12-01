@@ -26,17 +26,23 @@ export async function sendDiscordNotification(
 ): Promise<NotifyResult> {
   const webhookUrl = env.discordWebhookUrl;
 
+  console.log(`[Discord] Attempting to send notification to webhook...`);
+  console.log(`[Discord] Webhook URL configured: ${webhookUrl ? "YES" : "NO"}`);
+
   if (!webhookUrl) {
     console.warn("Discord webhook URL not configured, skipping notification");
     return { success: false, errorMsg: "Discord webhook URL not configured" };
   }
 
   try {
+    console.log(`[Discord] Sending message:`, JSON.stringify(message, null, 2));
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(message),
     });
+
+    console.log(`[Discord] Response status: ${response.status}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -47,6 +53,7 @@ export async function sendDiscordNotification(
       };
     }
 
+    console.log(`[Discord] ✅ Notification sent successfully!`);
     return { success: true };
   } catch (error: any) {
     const errorMsg = error?.message ?? String(error);
@@ -69,20 +76,28 @@ export async function sendAlertNotification(params: {
 
   const isPositive = alertType === "price_above" || alertType === "change_above";
   const color = isPositive ? 0x22c55e : 0xef4444; 
-  const alertTypeDisplay = alertType.replace("_", " ").toUpperCase();
+  
+  // Traduction des types d'alertes en français
+  const alertTypeLabels: Record<string, string> = {
+    "price_above": "PRIX SUPÉRIEUR À",
+    "price_below": "PRIX INFÉRIEUR À",
+    "change_above": "VARIATION 24H SUPÉRIEURE À",
+    "change_below": "VARIATION 24H INFÉRIEURE À",
+  };
+  const alertTypeDisplay = alertTypeLabels[alertType] || alertType.replace("_", " ").toUpperCase();
 
   const embed: DiscordEmbed = {
-    title: `🚨 Alert Triggered: ${assetName} (${assetSymbol.toUpperCase()})`,
-    description: `Your **${alertTypeDisplay}** alert has been triggered!`,
+    title: `🚨 Alerte Déclenchée: ${assetName} (${assetSymbol.toUpperCase()})`,
+    description: `Votre alerte **${alertTypeDisplay}** a été déclenchée !`,
     color,
     fields: [
       {
-        name: "Current Price",
+        name: "💰 Prix Actuel",
         value: `$${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`,
         inline: true,
       },
       {
-        name: "Threshold",
+        name: "🎯 Seuil",
         value: alertType.includes("price")
           ? `$${threshold.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
           : `${threshold}%`,
@@ -90,13 +105,13 @@ export async function sendAlertNotification(params: {
       },
     ],
     timestamp: new Date().toISOString(),
-    footer: { text: "Crypto Alert System" },
+    footer: { text: "Système d'Alertes Crypto" },
   };
 
   if (change24hPct !== null && change24hPct !== undefined) {
     const changeSign = change24hPct >= 0 ? "+" : "";
     embed.fields?.push({
-      name: "24h Change",
+      name: "📊 Variation 24h",
       value: `${changeSign}${change24hPct.toFixed(2)}%`,
       inline: true,
     });

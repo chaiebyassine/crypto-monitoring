@@ -1,6 +1,6 @@
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
-const USE_MOCK_AUTH = true;
+const USE_MOCK_AUTH = false;
 const USE_MOCK_DATA = false; 
 const FALLBACK_TO_MOCK = true; 
 
@@ -367,7 +367,7 @@ export async function fetchChanges(): Promise<{symbol: string; name: string; las
 }
 
 export async function fetchAlerts(): Promise<Alert[]> {
-  const r = await fetch(`${BASE}/alerts`);
+  const r = await fetch(`${BASE}/alerts`, { headers: authHeaders() });
   if (!r.ok) throw new Error("Failed /alerts");
   const j = await r.json();
   return j.data ?? [];
@@ -376,7 +376,7 @@ export async function fetchAlerts(): Promise<Alert[]> {
 export async function createAlert(assetId: number, type: AlertType, threshold: number): Promise<Alert> {
   const r = await fetch(`${BASE}/alerts`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ assetId, type, threshold }),
   });
   if (!r.ok) throw new Error("Failed to create alert");
@@ -385,21 +385,21 @@ export async function createAlert(assetId: number, type: AlertType, threshold: n
 }
 
 export async function activateAlert(id: number): Promise<Alert> {
-  const r = await fetch(`${BASE}/alerts/${id}/activate`, { method: "PUT" });
+  const r = await fetch(`${BASE}/alerts/${id}/activate`, { method: "PUT", headers: authHeaders() });
   if (!r.ok) throw new Error("Failed to activate alert");
   const j = await r.json();
   return j.data;
 }
 
 export async function deactivateAlert(id: number): Promise<Alert> {
-  const r = await fetch(`${BASE}/alerts/${id}/deactivate`, { method: "PUT" });
+  const r = await fetch(`${BASE}/alerts/${id}/deactivate`, { method: "PUT", headers: authHeaders() });
   if (!r.ok) throw new Error("Failed to deactivate alert");
   const j = await r.json();
   return j.data;
 }
 
 export async function deleteAlert(id: number): Promise<void> {
-  const r = await fetch(`${BASE}/alerts/${id}`, { method: "DELETE" });
+  const r = await fetch(`${BASE}/alerts/${id}`, { method: "DELETE", headers: authHeaders() });
   if (!r.ok) throw new Error("Failed to delete alert");
 }
 
@@ -422,7 +422,7 @@ export async function fetchForecast(
 }
 
 export async function fetchPortfolios(): Promise<Portfolio[]> {
-  const r = await fetch(`${BASE}/portfolios`);
+  const r = await fetch(`${BASE}/portfolios`, { headers: authHeaders() });
   if (!r.ok) throw new Error("Failed /portfolios");
   const j = await r.json();
   return j.data ?? [];
@@ -431,7 +431,7 @@ export async function fetchPortfolios(): Promise<Portfolio[]> {
 export async function createPortfolio(name: string): Promise<Portfolio> {
   const r = await fetch(`${BASE}/portfolios`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ name }),
   });
   if (!r.ok) throw new Error("Failed to create portfolio");
@@ -440,19 +440,19 @@ export async function createPortfolio(name: string): Promise<Portfolio> {
 }
 
 export async function deletePortfolio(id: number): Promise<void> {
-  const r = await fetch(`${BASE}/portfolios/${id}`, { method: "DELETE" });
+  const r = await fetch(`${BASE}/portfolios/${id}`, { method: "DELETE", headers: authHeaders() });
   if (!r.ok) throw new Error("Failed to delete portfolio");
 }
 
 export async function fetchPortfolioPnL(portfolioId: number): Promise<PortfolioPnL> {
-  const r = await fetch(`${BASE}/portfolios/${portfolioId}/pnl`);
+  const r = await fetch(`${BASE}/portfolios/${portfolioId}/pnl`, { headers: authHeaders() });
   if (!r.ok) throw new Error("Failed to fetch portfolio PnL");
   const j = await r.json();
   return j.data;
 }
 
 export async function fetchPositions(portfolioId: number): Promise<Position[]> {
-  const r = await fetch(`${BASE}/portfolios/${portfolioId}/positions`);
+  const r = await fetch(`${BASE}/portfolios/${portfolioId}/positions`, { headers: authHeaders() });
   if (!r.ok) throw new Error("Failed /positions");
   const j = await r.json();
   return j.data ?? [];
@@ -490,7 +490,7 @@ export async function fetchOhlc(
 }
 
 export async function fetchTrades(portfolioId: number, limit = 20): Promise<Trade[]> {
-  const r = await fetch(`${BASE}/portfolios/${portfolioId}/trades?limit=${limit}`);
+  const r = await fetch(`${BASE}/portfolios/${portfolioId}/trades?limit=${limit}`, { headers: authHeaders() });
   if (!r.ok) throw new Error("Failed /trades");
   const j = await r.json();
   return j.data ?? [];
@@ -506,7 +506,7 @@ export async function executeTrade(
 ): Promise<Trade> {
   const r = await fetch(`${BASE}/portfolios/${portfolioId}/trades`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ assetId, side, quantity, priceUsd, notes }),
   });
   if (!r.ok) throw new Error("Failed to execute trade");

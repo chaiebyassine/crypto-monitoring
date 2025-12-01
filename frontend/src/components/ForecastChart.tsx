@@ -19,9 +19,9 @@ import {
 } from "../lib/api";
 
 const METHODS: { value: ForecastMethod; label: string; description: string }[] = [
-  { value: "sma", label: "SMA", description: "Simple Moving Average" },
-  { value: "ema", label: "EMA", description: "Exponential Moving Average" },
-  { value: "linear", label: "Linear", description: "Linear Regression" },
+  { value: "sma", label: "SMA", description: "Moyenne Mobile Simple" },
+  { value: "ema", label: "EMA", description: "Moyenne Mobile Exponentielle" },
+  { value: "linear", label: "Linéaire", description: "Régression Linéaire" },
 ];
 
 export default function ForecastChart() {
@@ -101,7 +101,7 @@ export default function ForecastChart() {
       <div className="panel-header">
         <h2 className="panel-title">
           <span className="panel-icon">📈</span>
-          Price Forecast
+          Prévision de Prix
         </h2>
       </div>
 
@@ -109,7 +109,7 @@ export default function ForecastChart() {
       <div className="forecast-controls">
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Asset</label>
+            <label className="form-label">Crypto</label>
             <select
               className="form-select"
               value={symbol}
@@ -124,7 +124,7 @@ export default function ForecastChart() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Method</label>
+            <label className="form-label">Méthode</label>
             <select
               className="form-select"
               value={method}
@@ -139,7 +139,7 @@ export default function ForecastChart() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">History Points</label>
+            <label className="form-label">Historique</label>
             <select
               className="form-select"
               value={historyCount}
@@ -152,15 +152,15 @@ export default function ForecastChart() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Prediction Steps</label>
+            <label className="form-label">Prédictions</label>
             <select
               className="form-select"
               value={stepsCount}
               onChange={(e) => setStepsCount(Number(e.target.value))}
             >
-              <option value={5}>5 steps</option>
-              <option value={10}>10 steps</option>
-              <option value={20}>20 steps</option>
+              <option value={5}>5 étapes</option>
+              <option value={10}>10 étapes</option>
+              <option value={20}>20 étapes</option>
             </select>
           </div>
         </div>
@@ -172,26 +172,26 @@ export default function ForecastChart() {
       {forecast?.metrics && (
         <div className="forecast-metrics">
           <div className="metric-card">
-            <span className="metric-label">Current Price</span>
+            <span className="metric-label">Prix Actuel</span>
             <span className="metric-value">
               ${(forecast.metrics.lastPrice ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Predicted Price</span>
+            <span className="metric-label">Prix Prédit</span>
             <span className="metric-value">
               ${(forecast.metrics.predictedPrice ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Predicted Change</span>
+            <span className="metric-label">Variation Prédite</span>
             <span className={`metric-value ${(forecast.metrics.predictedChange ?? 0) >= 0 ? "positive" : "negative"}`}>
               {(forecast.metrics.predictedChange ?? 0) >= 0 ? "+" : ""}
               ${Math.abs(forecast.metrics.predictedChange ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">Change %</span>
+            <span className="metric-label">Variation %</span>
             <span className={`metric-value ${(forecast.metrics.predictedChangePct ?? 0) >= 0 ? "positive" : "negative"}`}>
               {(forecast.metrics.predictedChangePct ?? 0) >= 0 ? "+" : ""}
               {(forecast.metrics.predictedChangePct ?? 0).toFixed(2)}%
@@ -202,7 +202,7 @@ export default function ForecastChart() {
 
       {/* Chart */}
       {loading ? (
-        <div className="panel-loading">Loading forecast...</div>
+        <div className="panel-loading">Chargement des prévisions...</div>
       ) : chartData.length > 0 ? (
         <div className="forecast-chart" style={{ width: '100%', minHeight: 400 }}>
           <ResponsiveContainer width="100%" height={400}>
@@ -244,12 +244,12 @@ export default function ForecastChart() {
                 labelFormatter={(ts) => new Date(ts).toLocaleString()}
                 formatter={(value: number, name: string) => [
                   `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-                  name === "historical" ? "Historical" : "Predicted",
+                  name === "historical" ? "Historique" : "Prédiction",
                 ]}
               />
               <Legend
                 wrapperStyle={{ paddingTop: 20 }}
-                formatter={(value) => (value === "historical" ? "Historical" : "Predicted")}
+                formatter={(value) => (value === "historical" ? "Historique" : "Prédiction")}
               />
               {lastHistoricalTime && (
                 <ReferenceLine
@@ -257,7 +257,7 @@ export default function ForecastChart() {
                   stroke="#64748b"
                   strokeDasharray="5 5"
                   label={{
-                    value: "Now",
+                    value: "Maintenant",
                     fill: "#64748b",
                     fontSize: 12,
                     position: "top",
@@ -287,7 +287,7 @@ export default function ForecastChart() {
           </ResponsiveContainer>
         </div>
       ) : !loading && !error ? (
-        <div className="panel-empty">No forecast data available</div>
+        <div className="panel-empty">Aucune donnée de prévision disponible</div>
       ) : null}
     </div>
   );

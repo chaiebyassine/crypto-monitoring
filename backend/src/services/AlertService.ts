@@ -109,9 +109,13 @@ async function triggerAlert(
 ): Promise<void> {
   const now = new Date();
 
+  // Désactiver l'alerte après déclenchement pour éviter les notifications répétées
   await prisma.alert.update({
     where: { id: alert.id },
-    data: { lastTriggered: now },
+    data: { 
+      lastTriggered: now,
+      isActive: false,  // Désactive l'alerte après notification
+    },
   });
 
   const notifyResult = await sendAlertNotification({
