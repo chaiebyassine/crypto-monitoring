@@ -35,7 +35,6 @@ function random24hChange(): number {
 
 
 export async function fetchFromMock(ids: string[]): Promise<MockCryptoData[]> {
-  // Simulate network delay (50-150ms)
   await new Promise((resolve) => setTimeout(resolve, 50 + Math.random() * 100));
 
   const results: MockCryptoData[] = [];
