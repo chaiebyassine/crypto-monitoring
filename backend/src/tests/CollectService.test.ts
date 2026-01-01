@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as CollectService from "../services/CollectService.js";
+// CollectService module is mocked below
 
 describe("CollectService", () => {
   const mockPrisma = {

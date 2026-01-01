@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll as _afterAll, beforeEach, vi } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
 
