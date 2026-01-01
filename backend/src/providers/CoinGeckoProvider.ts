@@ -11,7 +11,6 @@ type CoinGeckoItem = {
 
 let rateLimitedUntil: number | null = null;
 
-
 export async function fetchFromCoinGecko(ids: string[]) {
   if (rateLimitedUntil && Date.now() < rateLimitedUntil) {
     const waitSecs = Math.ceil((rateLimitedUntil - Date.now()) / 1000);

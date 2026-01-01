@@ -1,5 +1,3 @@
-
-
 type MockCryptoData = {
   providerId: string;
   source: "mock";
@@ -11,7 +9,10 @@ type MockCryptoData = {
   change24hPct: number | null;
 };
 
-const BASE_PRICES: Record<string, { price: number; name: string; marketCap: number; volume: number }> = {
+const BASE_PRICES: Record<
+  string,
+  { price: number; name: string; marketCap: number; volume: number }
+> = {
   bitcoin: { price: 97500, name: "Bitcoin", marketCap: 1_920_000_000_000, volume: 45_000_000_000 },
   ethereum: { price: 3650, name: "Ethereum", marketCap: 440_000_000_000, volume: 18_000_000_000 },
   solana: { price: 245, name: "Solana", marketCap: 115_000_000_000, volume: 4_500_000_000 },
@@ -32,7 +33,6 @@ function randomVariation(basePrice: number): number {
 function random24hChange(): number {
   return (Math.random() - 0.5) * 20;
 }
-
 
 export async function fetchFromMock(ids: string[]): Promise<MockCryptoData[]> {
   await new Promise((resolve) => setTimeout(resolve, 50 + Math.random() * 100));
