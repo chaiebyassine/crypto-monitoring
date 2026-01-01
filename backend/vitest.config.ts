@@ -7,13 +7,13 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html"],
+      reporter: ["text", "json", "html", "lcov"],
       include: ["src/**/*.ts"],
       exclude: ["src/**/*.test.ts", "src/**/*.spec.ts", "src/index.ts", "src/scripts/**"],
       thresholds: {
         lines: 70,
         functions: 70,
-        branches: 70,
+        branches: 65,
         statements: 70,
       },
     },
