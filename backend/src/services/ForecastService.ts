@@ -107,9 +107,7 @@ function forecastSMA(
     intervals.push(historical[i].t.getTime() - historical[i - 1].t.getTime());
   }
   const avgInterval =
-    intervals.length > 0
-      ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-      : 60000; // Default 1 minute
+    intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 60000; // Default 1 minute
 
   // Calculate SMA
   const smaValues = calculateSMA(prices, Math.min(period, prices.length));
@@ -155,9 +153,7 @@ function forecastEMA(
     intervals.push(historical[i].t.getTime() - historical[i - 1].t.getTime());
   }
   const avgInterval =
-    intervals.length > 0
-      ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-      : 60000;
+    intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 60000;
 
   // Calculate EMA
   const emaValues = calculateEMA(prices, Math.min(period, prices.length));
@@ -198,10 +194,7 @@ function forecastEMA(
  * Linear regression forecast
  * Projects based on best-fit line through historical data
  */
-function forecastLinear(
-  historical: ForecastPoint[],
-  steps: number
-): ForecastPoint[] {
+function forecastLinear(historical: ForecastPoint[], steps: number): ForecastPoint[] {
   const prices = historical.map((h) => h.price);
   const lastTime = historical[historical.length - 1].t.getTime();
 
@@ -211,9 +204,7 @@ function forecastLinear(
     intervals.push(historical[i].t.getTime() - historical[i - 1].t.getTime());
   }
   const avgInterval =
-    intervals.length > 0
-      ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-      : 60000;
+    intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 60000;
 
   // Linear regression: y = mx + b
   const n = prices.length;

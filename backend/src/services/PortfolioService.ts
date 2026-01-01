@@ -55,7 +55,6 @@ export interface PortfolioPnL {
   };
 }
 
-
 export async function createPortfolio(name: string) {
   return prisma.portfolio.create({
     data: { name },
@@ -77,7 +76,6 @@ export async function getPortfolio(id: number) {
     },
   });
 }
-
 
 export async function executeTrade(input: TradeInput): Promise<TradeResult> {
   const { portfolioId, assetId, side, quantity, priceUsd, notes } = input;
@@ -117,16 +115,13 @@ export async function executeTrade(input: TradeInput): Promise<TradeResult> {
     const currentTotalCost = currentQty * currentAvgCost;
 
     newQuantity = currentQty + quantity;
-    newAvgCost =
-      newQuantity > 0 ? (currentTotalCost + totalUsd) / newQuantity : priceUsd;
+    newAvgCost = newQuantity > 0 ? (currentTotalCost + totalUsd) / newQuantity : priceUsd;
   } else {
     const currentQty = existingPosition?.quantity ?? 0;
     const currentAvgCost = existingPosition?.avgCost ?? 0;
 
     if (quantity > currentQty) {
-      throw new Error(
-        `Insufficient position: have ${currentQty}, trying to sell ${quantity}`
-      );
+      throw new Error(`Insufficient position: have ${currentQty}, trying to sell ${quantity}`);
     }
 
     realizedPnl = (priceUsd - currentAvgCost) * quantity;
@@ -215,9 +210,7 @@ export function calculateUnrealizedPnL(
   return { pnl, pnlPct };
 }
 
-export async function getPortfolioPnL(
-  portfolioId: number
-): Promise<PortfolioPnL | null> {
+export async function getPortfolioPnL(portfolioId: number): Promise<PortfolioPnL | null> {
   const portfolio = await prisma.portfolio.findUnique({
     where: { id: portfolioId },
     include: {
@@ -237,11 +230,7 @@ export async function getPortfolioPnL(
 
     const posTotalCost = pos.quantity * pos.avgCost;
     const currentValue = pos.quantity * currentPrice;
-    const { pnl, pnlPct } = calculateUnrealizedPnL(
-      pos.quantity,
-      pos.avgCost,
-      currentPrice
-    );
+    const { pnl, pnlPct } = calculateUnrealizedPnL(pos.quantity, pos.avgCost, currentPrice);
 
     positions.push({
       id: pos.id,
@@ -280,17 +269,13 @@ export async function getPortfolioPnL(
   };
 }
 
-
 async function calculateRealizedPnL(portfolioId: number): Promise<number> {
   const trades = await prisma.trade.findMany({
     where: { portfolioId },
     orderBy: { executedAt: "asc" },
   });
 
-  const assetState = new Map<
-    number,
-    { quantity: number; avgCost: number; realizedPnl: number }
-  >();
+  const assetState = new Map<number, { quantity: number; avgCost: number; realizedPnl: number }>();
 
   for (const trade of trades) {
     const state = assetState.get(trade.assetId) ?? {
@@ -300,8 +285,7 @@ async function calculateRealizedPnL(portfolioId: number): Promise<number> {
     };
 
     if (trade.side === "buy") {
-      const newTotalCost =
-        state.quantity * state.avgCost + trade.quantity * trade.priceUsd;
+      const newTotalCost = state.quantity * state.avgCost + trade.quantity * trade.priceUsd;
       state.quantity += trade.quantity;
       state.avgCost = state.quantity > 0 ? newTotalCost / state.quantity : 0;
     } else {
@@ -320,10 +304,7 @@ async function calculateRealizedPnL(portfolioId: number): Promise<number> {
 
   return totalRealizedPnl;
 }
-export async function getTradeHistory(
-  portfolioId: number,
-  limit: number = 50
-) {
+export async function getTradeHistory(portfolioId: number, limit: number = 50) {
   return prisma.trade.findMany({
     where: { portfolioId },
     include: { asset: true },

@@ -21,9 +21,7 @@ export interface NotifyResult {
   errorMsg?: string;
 }
 
-export async function sendDiscordNotification(
-  message: DiscordMessage
-): Promise<NotifyResult> {
+export async function sendDiscordNotification(message: DiscordMessage): Promise<NotifyResult> {
   const webhookUrl = env.discordWebhookUrl;
 
   console.log(`[Discord] Attempting to send notification to webhook...`);
@@ -62,7 +60,6 @@ export async function sendDiscordNotification(
   }
 }
 
-
 export async function sendAlertNotification(params: {
   assetName: string;
   assetSymbol: string;
@@ -71,18 +68,17 @@ export async function sendAlertNotification(params: {
   currentPrice: number;
   change24hPct?: number | null;
 }): Promise<NotifyResult> {
-  const { assetName, assetSymbol, alertType, threshold, currentPrice, change24hPct } =
-    params;
+  const { assetName, assetSymbol, alertType, threshold, currentPrice, change24hPct } = params;
 
   const isPositive = alertType === "price_above" || alertType === "change_above";
-  const color = isPositive ? 0x22c55e : 0xef4444; 
-  
+  const color = isPositive ? 0x22c55e : 0xef4444;
+
   // Traduction des types d'alertes en français
   const alertTypeLabels: Record<string, string> = {
-    "price_above": "PRIX SUPÉRIEUR À",
-    "price_below": "PRIX INFÉRIEUR À",
-    "change_above": "VARIATION 24H SUPÉRIEURE À",
-    "change_below": "VARIATION 24H INFÉRIEURE À",
+    price_above: "PRIX SUPÉRIEUR À",
+    price_below: "PRIX INFÉRIEUR À",
+    change_above: "VARIATION 24H SUPÉRIEURE À",
+    change_below: "VARIATION 24H INFÉRIEURE À",
   };
   const alertTypeDisplay = alertTypeLabels[alertType] || alertType.replace("_", " ").toUpperCase();
 
