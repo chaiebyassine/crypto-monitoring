@@ -15,11 +15,7 @@ declare global {
  * Middleware d'authentification - vérifie le token JWT
  * Le token doit être dans le header Authorization: Bearer <token>
  */
-export const authenticate = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -39,7 +35,7 @@ export const authenticate = (
 
     // Vérifier et décoder le token
     const decoded = AuthService.verifyToken(token);
-    
+
     // Ajouter les infos utilisateur à la requête
     req.user = decoded;
 
@@ -52,9 +48,9 @@ export const authenticate = (
 /**
  * Middleware d'autorisation - vérifie que l'utilisateur a le bon rôle
  * À utiliser APRÈS le middleware authenticate
- * 
+ *
  * @param allowedRoles - Liste des rôles autorisés
- * 
+ *
  * Exemple: authorize("ADMIN") ou authorize("USER", "ADMIN")
  */
 export const authorize = (...allowedRoles: Role[]) => {
@@ -65,10 +61,10 @@ export const authorize = (...allowedRoles: Role[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: "Accès refusé. Rôle insuffisant",
         required: allowedRoles,
-        current: req.user.role
+        current: req.user.role,
       });
       return;
     }
@@ -81,11 +77,7 @@ export const authorize = (...allowedRoles: Role[]) => {
  * Middleware optionnel d'authentification
  * Ne bloque pas si pas de token, mais ajoute l'utilisateur si présent
  */
-export const optionalAuth = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
 
