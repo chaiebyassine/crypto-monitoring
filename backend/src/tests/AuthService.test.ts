@@ -45,11 +45,7 @@ describe("AuthService", () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       mockPrisma.user.create.mockResolvedValue(mockUser);
 
-      const result = await AuthService.register(
-        "test@example.com",
-        "password123",
-        "Test User"
-      );
+      const result = await AuthService.register("test@example.com", "password123", "Test User");
 
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.name).toBe("Test User");
@@ -64,9 +60,9 @@ describe("AuthService", () => {
         email: "existing@example.com",
       });
 
-      await expect(
-        AuthService.register("existing@example.com", "password123")
-      ).rejects.toThrow("existe déjà");
+      await expect(AuthService.register("existing@example.com", "password123")).rejects.toThrow(
+        "existe déjà"
+      );
     });
 
     it("devrait hasher le mot de passe avant de sauvegarder", async () => {
@@ -109,9 +105,9 @@ describe("AuthService", () => {
     it("devrait rejeter si l'email n'existe pas", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(
-        AuthService.login("unknown@example.com", "password123")
-      ).rejects.toThrow("Email ou mot de passe incorrect");
+      await expect(AuthService.login("unknown@example.com", "password123")).rejects.toThrow(
+        "Email ou mot de passe incorrect"
+      );
     });
 
     it("devrait rejeter si le mot de passe est incorrect", async () => {
@@ -122,9 +118,9 @@ describe("AuthService", () => {
         password: hashedPassword,
       });
 
-      await expect(
-        AuthService.login("test@example.com", "wrong_password")
-      ).rejects.toThrow("Email ou mot de passe incorrect");
+      await expect(AuthService.login("test@example.com", "wrong_password")).rejects.toThrow(
+        "Email ou mot de passe incorrect"
+      );
     });
   });
 
@@ -144,9 +140,7 @@ describe("AuthService", () => {
     });
 
     it("devrait rejeter un token invalide", () => {
-      expect(() => AuthService.verifyToken("invalid_token")).toThrow(
-        "Token invalide ou expiré"
-      );
+      expect(() => AuthService.verifyToken("invalid_token")).toThrow("Token invalide ou expiré");
     });
 
     it("devrait rejeter un token expiré", () => {
@@ -155,9 +149,7 @@ describe("AuthService", () => {
         expiresIn: "-1s",
       });
 
-      expect(() => AuthService.verifyToken(expiredToken)).toThrow(
-        "Token invalide ou expiré"
-      );
+      expect(() => AuthService.verifyToken(expiredToken)).toThrow("Token invalide ou expiré");
     });
   });
 
@@ -201,9 +193,7 @@ describe("AuthService", () => {
     it("devrait rejeter si l'utilisateur n'existe pas", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(AuthService.getUserById(999)).rejects.toThrow(
-        "Utilisateur non trouvé"
-      );
+      await expect(AuthService.getUserById(999)).rejects.toThrow("Utilisateur non trouvé");
     });
   });
 
@@ -231,17 +221,17 @@ describe("AuthService", () => {
         password: currentHashedPassword,
       });
 
-      await expect(
-        AuthService.updatePassword(1, "wrong_password", "new_password")
-      ).rejects.toThrow("Mot de passe actuel incorrect");
+      await expect(AuthService.updatePassword(1, "wrong_password", "new_password")).rejects.toThrow(
+        "Mot de passe actuel incorrect"
+      );
     });
 
     it("devrait rejeter si l'utilisateur n'existe pas", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(
-        AuthService.updatePassword(999, "current", "new")
-      ).rejects.toThrow("Utilisateur non trouvé");
+      await expect(AuthService.updatePassword(999, "current", "new")).rejects.toThrow(
+        "Utilisateur non trouvé"
+      );
     });
   });
 });

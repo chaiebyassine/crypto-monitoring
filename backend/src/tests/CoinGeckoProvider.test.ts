@@ -16,7 +16,7 @@ describe("CoinGeckoProvider", () => {
   describe("fetchFromCoinGecko", () => {
     it("devrait récupérer et normaliser les données des cryptos", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       // Mock de la réponse CoinGecko
       const mockResponse = [
         {
@@ -73,7 +73,7 @@ describe("CoinGeckoProvider", () => {
 
     it("devrait gérer les valeurs manquantes avec null", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       const mockResponse = [
         {
           id: "solana",
@@ -105,7 +105,7 @@ describe("CoinGeckoProvider", () => {
 
     it("devrait gérer les erreurs HTTP 500", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       nock(COINGECKO_API)
         .get("/api/v3/coins/markets")
         .query({ vs_currency: "usd", ids: "bitcoin" })
@@ -116,7 +116,7 @@ describe("CoinGeckoProvider", () => {
 
     it("devrait retourner un tableau vide pour une réponse vide", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       nock(COINGECKO_API)
         .get("/api/v3/coins/markets")
         .query({ vs_currency: "usd", ids: "unknown_coin" })
@@ -130,7 +130,7 @@ describe("CoinGeckoProvider", () => {
 
     it("devrait gérer plusieurs cryptos dans une seule requête", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       const mockResponse = [
         {
           id: "bitcoin",
@@ -166,16 +166,12 @@ describe("CoinGeckoProvider", () => {
       const result = await fetchFromCoinGecko(["bitcoin", "ethereum", "solana"]);
 
       expect(result).toHaveLength(3);
-      expect(result.map((r) => r.providerId)).toEqual([
-        "bitcoin",
-        "ethereum",
-        "solana",
-      ]);
+      expect(result.map((r) => r.providerId)).toEqual(["bitcoin", "ethereum", "solana"]);
     });
 
     it("devrait gérer les erreurs réseau (timeout)", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       nock(COINGECKO_API)
         .get("/api/v3/coins/markets")
         .query({ vs_currency: "usd", ids: "bitcoin" })
@@ -187,15 +183,13 @@ describe("CoinGeckoProvider", () => {
     // Test rate limiting en dernier pour éviter d'affecter les autres tests
     it("devrait gérer le rate limiting (429)", async () => {
       const { fetchFromCoinGecko } = await import("../providers/CoinGeckoProvider.js");
-      
+
       nock(COINGECKO_API)
         .get("/api/v3/coins/markets")
         .query({ vs_currency: "usd", ids: "bitcoin" })
         .reply(429, "Too Many Requests");
 
-      await expect(fetchFromCoinGecko(["bitcoin"])).rejects.toThrow(
-        "Rate limited"
-      );
+      await expect(fetchFromCoinGecko(["bitcoin"])).rejects.toThrow("Rate limited");
     });
   });
 });

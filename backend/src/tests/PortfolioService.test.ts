@@ -87,11 +87,9 @@ describe("PortfolioService", () => {
         id: 1,
         name: "Mon Portfolio",
         positions: [
-          { id: 1, assetId: 1, quantity: 0.5, avgCost: 97000, asset: { symbol: "bitcoin" } }
+          { id: 1, assetId: 1, quantity: 0.5, avgCost: 97000, asset: { symbol: "bitcoin" } },
         ],
-        trades: [
-          { id: 1, side: "buy", quantity: 0.5 }
-        ],
+        trades: [{ id: 1, side: "buy", quantity: 0.5 }],
       };
 
       mockPrisma.portfolio.findUnique.mockResolvedValue(mockPortfolio);

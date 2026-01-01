@@ -28,7 +28,7 @@ describe("ForecastService", () => {
     const now = new Date();
     for (let i = 0; i < count; i++) {
       const date = new Date(now.getTime() - i * 5 * 60 * 1000);
-      const variation = (Math.sin(i * 0.5) * basePrice * 0.01); // Variation sinusoïdale
+      const variation = Math.sin(i * 0.5) * basePrice * 0.01; // Variation sinusoïdale
       data.push({
         ingestedAt: date,
         priceUsd: basePrice + variation,
@@ -66,9 +66,7 @@ describe("ForecastService", () => {
         id: 1,
         symbol: "bitcoin",
       });
-      mockPrisma.marketSnapshot.findMany.mockResolvedValue(
-        generateHistoricalDataDesc(20, 97500)
-      );
+      mockPrisma.marketSnapshot.findMany.mockResolvedValue(generateHistoricalDataDesc(20, 97500));
 
       const result = await generateForecast("bitcoin", "sma", 20, 5);
 
@@ -85,9 +83,7 @@ describe("ForecastService", () => {
         id: 1,
         symbol: "ethereum",
       });
-      mockPrisma.marketSnapshot.findMany.mockResolvedValue(
-        generateHistoricalDataDesc(30, 3650)
-      );
+      mockPrisma.marketSnapshot.findMany.mockResolvedValue(generateHistoricalDataDesc(30, 3650));
 
       const result = await generateForecast("ethereum", "ema", 30, 10);
 
@@ -101,9 +97,7 @@ describe("ForecastService", () => {
         id: 1,
         symbol: "solana",
       });
-      mockPrisma.marketSnapshot.findMany.mockResolvedValue(
-        generateHistoricalDataDesc(25, 245)
-      );
+      mockPrisma.marketSnapshot.findMany.mockResolvedValue(generateHistoricalDataDesc(25, 245));
 
       const result = await generateForecast("solana", "linear", 25, 8);
 
@@ -117,9 +111,7 @@ describe("ForecastService", () => {
         id: 1,
         symbol: "bitcoin",
       });
-      mockPrisma.marketSnapshot.findMany.mockResolvedValue(
-        generateHistoricalDataDesc(15, 97500)
-      );
+      mockPrisma.marketSnapshot.findMany.mockResolvedValue(generateHistoricalDataDesc(15, 97500));
 
       const result = await generateForecast("bitcoin");
 
@@ -132,9 +124,7 @@ describe("ForecastService", () => {
         id: 1,
         symbol: "bitcoin",
       });
-      mockPrisma.marketSnapshot.findMany.mockResolvedValue(
-        generateHistoricalDataDesc(10, 97500)
-      );
+      mockPrisma.marketSnapshot.findMany.mockResolvedValue(generateHistoricalDataDesc(10, 97500));
 
       await generateForecast("BITCOIN");
 
@@ -148,9 +138,7 @@ describe("ForecastService", () => {
         id: 1,
         symbol: "bitcoin",
       });
-      mockPrisma.marketSnapshot.findMany.mockResolvedValue(
-        generateHistoricalDataDesc(20, 97500)
-      );
+      mockPrisma.marketSnapshot.findMany.mockResolvedValue(generateHistoricalDataDesc(20, 97500));
 
       const result = await generateForecast("bitcoin", "ema", 20, 5);
 
