@@ -104,33 +104,33 @@ export default function App() {
             className={`nav-tab ${activeTab === "dashboard" ? "active" : ""}`}
             onClick={() => setActiveTab("dashboard")}
           >
-            <span className="nav-icon">📊</span>
+            <span className="nav-icon"></span>
             Dashboard
           </button>
           <button
             className={`nav-tab ${activeTab === "forecast" ? "active" : ""}`}
             onClick={() => setActiveTab("forecast")}
           >
-            <span className="nav-icon">📈</span>
+            <span className="nav-icon"></span>
             Forecast
           </button>
           <button
             className={`nav-tab ${activeTab === "alerts" ? "active" : ""}`}
             onClick={() => setActiveTab("alerts")}
           >
-            <span className="nav-icon">🔔</span>
+            <span className="nav-icon"></span>
             Alerts
           </button>
           <button
             className={`nav-tab ${activeTab === "portfolio" ? "active" : ""}`}
             onClick={() => setActiveTab("portfolio")}
           >
-            <span className="nav-icon">💼</span>
-            Portfolio
+            <span className="nav-icon"></span>
+            portefeuille
           </button>
         </nav>
         <div className="user-info">
-          <span className="user-name">👤 {user.name || user.email}</span>
+          <span className="user-name"> {user.name || user.email}</span>
           <button className="logout-btn" onClick={logout}>
             Déconnexion
           </button>

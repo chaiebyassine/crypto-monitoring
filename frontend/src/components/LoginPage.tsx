@@ -33,7 +33,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-header">
-          <h1>🚀 Crypto Dashboard</h1>
+          <h1> Crypto Dashboard</h1>
           <p>{isRegister ? "Créer un compte" : "Connexion"}</p>
         </div>
 
