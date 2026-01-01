@@ -302,7 +302,7 @@ export default function PortfolioPanel() {
             className={`btn btn-trade ${showTradeForm ? "btn-secondary" : "btn-primary"}`}
             onClick={() => setShowTradeForm(!showTradeForm)}
           >
-            {showTradeForm ? "Annuler" : "📊 Nouveau Trade"}
+            {showTradeForm ? "Annuler" : " Nouveau Trade"}
           </button>
 
           {/* Formulaire Trade */}
@@ -520,7 +520,7 @@ export default function PortfolioPanel() {
 
       {!selectedPortfolioId && portfolios.length === 0 && (
         <div className="empty-state large">
-          <span className="empty-icon">💼</span>
+          <span className="empty-icon"></span>
           <p>Aucun portfolio. Créez-en un pour suivre vos investissements !</p>
         </div>
       )}

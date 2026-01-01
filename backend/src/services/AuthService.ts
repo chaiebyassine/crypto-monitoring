@@ -22,14 +22,8 @@ export interface AuthResponse {
 
 const SALT_ROUNDS = 10;
 
-
 export const AuthService = {
-  
-  async register(
-    email: string,
-    password: string,
-    name?: string
-  ): Promise<AuthResponse> {
+  async register(email: string, password: string, name?: string): Promise<AuthResponse> {
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -62,7 +56,6 @@ export const AuthService = {
     };
   },
 
- 
   async login(email: string, password: string): Promise<AuthResponse> {
     const user = await prisma.user.findUnique({
       where: { email },
@@ -100,7 +93,6 @@ export const AuthService = {
     }
   },
 
-  
   generateToken(user: { id: number; email: string; role: Role }): string {
     const payload: JwtPayload = {
       userId: user.id,

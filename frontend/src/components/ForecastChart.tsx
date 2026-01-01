@@ -100,7 +100,7 @@ export default function ForecastChart() {
     <div className="panel forecast-panel">
       <div className="panel-header">
         <h2 className="panel-title">
-          <span className="panel-icon">📈</span>
+          <span className="panel-icon"></span>
           Prévision de Prix
         </h2>
       </div>

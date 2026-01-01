@@ -15,7 +15,6 @@ type ProviderRow = {
   change24hPct: number | null;
 };
 
-
 async function fetchPrices(ids: string[]): Promise<ProviderRow[]> {
   if (env.provider === "mock") {
     console.log("[collect] Using mock provider");
@@ -32,7 +31,6 @@ async function fetchPrices(ids: string[]): Promise<ProviderRow[]> {
     throw err;
   }
 }
-
 
 export async function runOnce() {
   const run = await prisma.collectRun.create({

@@ -20,7 +20,6 @@ interface AlertWithAsset {
   };
 }
 
-
 export async function evaluateAlerts(): Promise<{
   evaluated: number;
   triggered: number;
@@ -103,18 +102,15 @@ function checkAlertCondition(
   }
 }
 
-async function triggerAlert(
-  alert: AlertWithAsset,
-  latest: LatestPrice
-): Promise<void> {
+async function triggerAlert(alert: AlertWithAsset, latest: LatestPrice): Promise<void> {
   const now = new Date();
 
   // Désactiver l'alerte après déclenchement pour éviter les notifications répétées
   await prisma.alert.update({
     where: { id: alert.id },
-    data: { 
+    data: {
       lastTriggered: now,
-      isActive: false,  // Désactive l'alerte après notification
+      isActive: false, // Désactive l'alerte après notification
     },
   });
 
@@ -147,16 +143,10 @@ async function triggerAlert(
       `Alert ${alert.id} triggered: ${alert.asset.symbol} ${alert.type} ${alert.threshold} (current: ${latest.priceUsd})`
     );
   } else {
-    console.error(
-      `Alert ${alert.id} triggered but notification failed: ${notifyResult.errorMsg}`
-    );
+    console.error(`Alert ${alert.id} triggered but notification failed: ${notifyResult.errorMsg}`);
   }
 }
-export async function createAlert(
-  assetId: number,
-  type: AlertType,
-  threshold: number
-) {
+export async function createAlert(assetId: number, type: AlertType, threshold: number) {
   return prisma.alert.create({
     data: {
       assetId,

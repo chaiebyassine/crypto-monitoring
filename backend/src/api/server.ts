@@ -11,10 +11,7 @@ import {
   getAlertsByAsset,
   type AlertType,
 } from "../services/AlertService.js";
-import {
-  generateForecast,
-  type ForecastMethod,
-} from "../services/ForecastService.js";
+import { generateForecast, type ForecastMethod } from "../services/ForecastService.js";
 import {
   createPortfolio,
   getPortfolios,
@@ -31,11 +28,6 @@ export function createServer() {
   app.use(cors({ origin: true }));
   app.use(express.json());
 
-  // ==================== AUTH ROUTES ====================
-
-  /**
-   * POST /auth/register - Inscription d'un nouvel utilisateur
-   */
   app.post("/auth/register", async (req, res) => {
     try {
       const { email, password, name } = req.body;
@@ -58,9 +50,6 @@ export function createServer() {
     }
   });
 
-  /**
-   * POST /auth/login - Connexion d'un utilisateur
-   */
   app.post("/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -80,9 +69,6 @@ export function createServer() {
     }
   });
 
-  /**
-   * GET /auth/me - Récupérer le profil de l'utilisateur connecté
-   */
   app.get("/auth/me", authenticate, async (req, res) => {
     try {
       const user = await AuthService.getUserById(req.user!.userId);
@@ -93,9 +79,6 @@ export function createServer() {
     }
   });
 
-  /**
-   * PATCH /auth/password - Changer le mot de passe
-   */
   app.patch("/auth/password", authenticate, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
@@ -115,9 +98,6 @@ export function createServer() {
     }
   });
 
-  /**
-   * GET /auth/users - Liste des utilisateurs (ADMIN uniquement)
-   */
   app.get("/auth/users", authenticate, authorize("ADMIN"), async (_req, res) => {
     try {
       const users = await prisma.user.findMany({
@@ -136,8 +116,6 @@ export function createServer() {
       res.status(500).json({ error: message });
     }
   });
-
-  // ==================== PUBLIC ROUTES ====================
 
   app.get("/", (_req, res) => {
     res.type("text").send("Backend OK. Try /health, POST /collect, GET /assets, GET /prices");
@@ -162,7 +140,6 @@ export function createServer() {
     }
   });
 
-
   app.get("/assets", async (_req, res) => {
     const assets = await prisma.asset.findMany({
       orderBy: { symbol: "asc" },
@@ -171,7 +148,6 @@ export function createServer() {
     res.set("Cache-Control", "public, max-age=10");
     res.json({ data: assets });
   });
-
 
   app.get("/changes", async (_req, res) => {
     const assets = await prisma.asset.findMany({
@@ -199,7 +175,9 @@ export function createServer() {
   });
 
   app.get("/prices", async (req, res) => {
-    const symbol = String(req.query.symbol ?? "").trim().toLowerCase();
+    const symbol = String(req.query.symbol ?? "")
+      .trim()
+      .toLowerCase();
     const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 20));
 
     if (!symbol) {
@@ -232,7 +210,9 @@ export function createServer() {
   });
 
   app.get("/prices/ohlc", async (req, res) => {
-    const symbol = String(req.query.symbol ?? "").trim().toLowerCase();
+    const symbol = String(req.query.symbol ?? "")
+      .trim()
+      .toLowerCase();
     const granularity = String(req.query.granularity ?? "1h");
 
     if (!symbol) {
@@ -291,9 +271,6 @@ export function createServer() {
 
     res.json({ symbol, granularity, data: candles });
   });
-
-
-  // ==================== ALERT ROUTES (PROTECTED) ====================
 
   app.get("/alerts", authenticate, async (req, res) => {
     try {
@@ -354,7 +331,12 @@ export function createServer() {
         return res.status(400).json({ error: "assetId must be a number" });
       }
 
-      const validTypes: AlertType[] = ["price_above", "price_below", "change_above", "change_below"];
+      const validTypes: AlertType[] = [
+        "price_above",
+        "price_below",
+        "change_above",
+        "change_below",
+      ];
       if (!validTypes.includes(type)) {
         return res.status(400).json({ error: `type must be one of: ${validTypes.join(", ")}` });
       }
@@ -461,10 +443,11 @@ export function createServer() {
     }
   });
 
-
   app.get("/forecast", async (req, res) => {
     try {
-      const symbol = String(req.query.symbol ?? "").trim().toLowerCase();
+      const symbol = String(req.query.symbol ?? "")
+        .trim()
+        .toLowerCase();
       const method = (req.query.method ?? "ema") as ForecastMethod;
       const history = Math.max(10, Math.min(200, Number(req.query.history) || 50));
       const steps = Math.max(1, Math.min(50, Number(req.query.steps) || 10));
@@ -490,9 +473,6 @@ export function createServer() {
       res.status(500).json({ error: message });
     }
   });
-
-
-  // ==================== PORTFOLIO ROUTES (PROTECTED) ====================
 
   app.get("/portfolios", authenticate, async (req, res) => {
     try {
@@ -558,7 +538,6 @@ export function createServer() {
         return res.status(400).json({ error: "Invalid portfolio ID" });
       }
 
-      // Vérifier ownership
       const existing = await prisma.portfolio.findUnique({ where: { id } });
       if (!existing || existing.userId !== userId) {
         return res.status(404).json({ error: "Portfolio not found" });
@@ -586,7 +565,6 @@ export function createServer() {
         return res.status(400).json({ error: "Invalid portfolio ID" });
       }
 
-      // Vérifier ownership
       const portfolio = await prisma.portfolio.findUnique({ where: { id } });
       if (!portfolio || portfolio.userId !== userId) {
         return res.status(404).json({ error: "Portfolio not found" });
@@ -612,7 +590,6 @@ export function createServer() {
         return res.status(400).json({ error: "Invalid portfolio ID" });
       }
 
-      // Vérifier ownership
       const portfolio = await prisma.portfolio.findUnique({ where: { id } });
       if (!portfolio || portfolio.userId !== userId) {
         return res.status(404).json({ error: "Portfolio not found" });
@@ -641,7 +618,6 @@ export function createServer() {
         return res.status(400).json({ error: "Invalid portfolio ID" });
       }
 
-      // Vérifier ownership
       const portfolio = await prisma.portfolio.findUnique({ where: { id } });
       if (!portfolio || portfolio.userId !== userId) {
         return res.status(404).json({ error: "Portfolio not found" });
