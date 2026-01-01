@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: gla_pass
       POSTGRES_DB: gla_db
     ports:
-      - "5432:5432"         
+      - "5432:5432"
     volumes:
       - gla-db-data:/var/lib/postgresql/data
 
@@ -23,8 +23,8 @@ services:
     depends_on:
       - db
     ports:
-      - "3001:3001"       
-    command: npm run dev    
+      - "3001:3001"
+    command: npm run dev
 
 volumes:
   gla-db-data:
