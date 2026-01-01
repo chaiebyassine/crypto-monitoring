@@ -307,9 +307,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner 400 si email manquant", async () => {
-        const res = await request(app)
-          .post("/auth/register")
-          .send({ password: "password123" });
+        const res = await request(app).post("/auth/register").send({ password: "password123" });
 
         expect(res.status).toBe(400);
         expect(res.body.error).toBe("Email requis");
@@ -361,9 +359,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner 400 si email manquant", async () => {
-        const res = await request(app)
-          .post("/auth/login")
-          .send({ password: "password123" });
+        const res = await request(app).post("/auth/login").send({ password: "password123" });
 
         expect(res.status).toBe(400);
       });
@@ -382,9 +378,7 @@ describe("API Integration Tests", () => {
           name: "Test User",
         });
 
-        const res = await request(app)
-          .get("/auth/me")
-          .set("Authorization", `Bearer ${validToken}`);
+        const res = await request(app).get("/auth/me").set("Authorization", `Bearer ${validToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.data.email).toBe("test@example.com");
@@ -429,9 +423,7 @@ describe("API Integration Tests", () => {
           { id: 1, assetId: 1, type: "price_above", threshold: 100000, isActive: true },
         ]);
 
-        const res = await request(app)
-          .get("/alerts")
-          .set("Authorization", `Bearer ${validToken}`);
+        const res = await request(app).get("/alerts").set("Authorization", `Bearer ${validToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.data).toHaveLength(1);
@@ -739,9 +731,7 @@ describe("API Integration Tests", () => {
 
       it("devrait retourner 400 pour position insuffisante (sell)", async () => {
         mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
-        mockPortfolioService.executeTrade.mockRejectedValue(
-          new Error("Insufficient position")
-        );
+        mockPortfolioService.executeTrade.mockRejectedValue(new Error("Insufficient position"));
 
         const res = await request(app)
           .post("/portfolios/1/trades")
