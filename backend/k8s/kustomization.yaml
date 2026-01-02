@@ -14,6 +14,8 @@ resources:
   - postgres-service.yaml
   - backend-deployment.yaml
   - backend-service.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
   - ingress.yaml
   - hpa.yaml
 
@@ -23,4 +25,6 @@ commonLabels:
 
 images:
   - name: gla-backend
+    newTag: latest
+  - name: gla-frontend
     newTag: latest
