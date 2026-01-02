@@ -4,6 +4,8 @@ import { prisma } from "../repos/prisma.js";
 import { runOnce } from "../services/CollectService.js";
 import { AuthService } from "../services/AuthService.js";
 import { authenticate, authorize } from "../middlewares/auth.js";
+import { metricsMiddleware } from "../middlewares/metrics.js";
+import { register } from "../metrics/prometheus.js";
 import {
   createAlert as _createAlert,
   deactivateAlert,
@@ -27,6 +29,19 @@ export function createServer() {
 
   app.use(cors({ origin: true }));
   app.use(express.json());
+
+  // Middleware de métriques Prometheus (avant les routes)
+  app.use(metricsMiddleware);
+
+  // Endpoint pour Prometheus
+  app.get("/metrics", async (_req, res) => {
+    try {
+      res.set("Content-Type", register.contentType);
+      res.end(await register.metrics());
+    } catch (_err) {
+      res.status(500).end();
+    }
+  });
 
   app.post("/auth/register", async (req, res) => {
     try {

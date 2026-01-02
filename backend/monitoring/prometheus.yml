@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  # Prometheus lui-même
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Backend Node.js
+  - job_name: 'backend'
+    static_configs:
+      - targets: ['backend:3001']
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # PostgreSQL (si postgres_exporter est ajouté)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
