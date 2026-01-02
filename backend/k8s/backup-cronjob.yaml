@@ -1,0 +1,99 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: gla-crypto
+  labels:
+    app.kubernetes.io/name: postgres-backup
+    app.kubernetes.io/component: backup
+spec:
+  # Tous les jours à 2h du matin
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backups/${POSTGRES_DB}_${TIMESTAMP}.sql.gz"
+                  
+                  echo "[INFO] Starting backup of database: ${POSTGRES_DB}"
+                  echo "[INFO] Destination: ${BACKUP_FILE}"
+                  
+                  # Effectuer le dump et compresser
+                  PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
+                    -h "${POSTGRES_HOST}" \
+                    -U "${POSTGRES_USER}" \
+                    -d "${POSTGRES_DB}" \
+                    --no-owner \
+                    --no-privileges \
+                    | gzip > "${BACKUP_FILE}"
+                  
+                  # Vérifier que le fichier a été créé
+                  if [ -f "${BACKUP_FILE}" ]; then
+                    SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+                    echo "[SUCCESS] Backup completed: ${BACKUP_FILE} (${SIZE})"
+                  else
+                    echo "[ERROR] Backup failed!"
+                    exit 1
+                  fi
+                  
+                  # Nettoyer les backups de plus de 7 jours
+                  echo "[INFO] Cleaning old backups..."
+                  find /backups -name "${POSTGRES_DB}_*.sql.gz" -mtime +7 -delete
+                  
+                  echo "[INFO] Current backups:"
+                  ls -la /backups/
+              env:
+                - name: POSTGRES_HOST
+                  value: "postgres"
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secrets
+                      key: POSTGRES_DB
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secrets
+                      key: POSTGRES_USER
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secrets
+                      key: POSTGRES_PASSWORD
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backups
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: gla-crypto
+  labels:
+    app.kubernetes.io/name: postgres-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

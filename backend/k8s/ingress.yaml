@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gla-ingress
+  namespace: gla-crypto
+  labels:
+    app.kubernetes.io/name: gla-crypto
+    app.kubernetes.io/component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Pour HTTPS avec cert-manager (décommenter si nécessaire)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  # Décommenter pour HTTPS
+  # tls:
+  #   - hosts:
+  #       - gla-crypto.local
+  #     secretName: gla-tls
+  rules:
+    # Frontend - route par défaut
+    - host: gla-crypto.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+    # Backend API
+    - host: api.gla-crypto.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3001
+                port:
+                  number: 3001

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gla-crypto
+  labels:
+    app.kubernetes.io/name: gla-crypto
+    app.kubernetes.io/part-of: gla

@@ -10,6 +10,8 @@ export default function CandlestickChart({ data, height = 480 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [size, setSize] = useState({ w: 800, h: height });
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -42,9 +44,6 @@ export default function CandlestickChart({ data, height = 480 }: Props) {
   const volumes = data.map((d) => d.volume ?? 0);
   const maxVol = Math.max(...volumes, 0);
   const volumeYFor = (v: number) => padding + mainH + 8 + ((maxVol - v) / (maxVol || 1)) * volAreaH;
-
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
   const handleMove = (evt: React.MouseEvent) => {
     const svg = svgRef.current;

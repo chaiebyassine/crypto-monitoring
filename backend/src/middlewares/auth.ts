@@ -40,7 +40,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
     req.user = decoded;
 
     next();
-  } catch (error) {
+  } catch (_error) {
     res.status(401).json({ error: "Token invalide ou expiré" });
   }
 };

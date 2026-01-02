@@ -1,0 +1,146 @@
+version: "3.9"
+
+# ===========================================
+# GLA Crypto Tracker - Full Stack Docker Compose
+# ===========================================
+# Usage:
+#   docker-compose up -d              # Démarrer tous les services
+#   docker-compose up -d --build      # Rebuild et démarrer
+#   docker-compose down               # Arrêter tous les services
+#   docker-compose logs -f            # Voir les logs
+# ===========================================
+
+services:
+  # ===========================================
+  # BASE DE DONNÉES POSTGRESQL
+  # ===========================================
+  db:
+    image: postgres:16
+    container_name: gla-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gla_user
+      POSTGRES_PASSWORD: gla_pass
+      POSTGRES_DB: gla_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - gla-db-data:/var/lib/postgresql/data
+      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gla_user -d gla_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gla-network
+
+  # ===========================================
+  # BACKEND NODE.JS / EXPRESS
+  # ===========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gla-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://gla_user:gla_pass@db:5432/gla_db
+      JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey123}
+      PORT: 3001
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    networks:
+      - gla-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===========================================
+  # FRONTEND REACT / VITE (NGINX)
+  # ===========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gla-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - gla-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================
+  # PROMETHEUS - MONITORING
+  # ===========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: gla-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - backend
+    networks:
+      - gla-network
+
+  # ===========================================
+  # GRAFANA - DASHBOARDS
+  # ===========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: gla-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./backend/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - gla-network
+
+# ===========================================
+# VOLUMES PERSISTANTS
+# ===========================================
+volumes:
+  gla-db-data:
+    name: gla-db-data
+  prometheus_data:
+    name: gla-prometheus-data
+  grafana_data:
+    name: gla-grafana-data
+
+# ===========================================
+# RÉSEAU
+# ===========================================
+networks:
+  gla-network:
+    name: gla-network
+    driver: bridge

@@ -12,10 +12,16 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
+    "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "security": "snyk test",
-    "security:report": "snyk test --json > snyk-report.json"
+    "security:report": "snyk test --json > snyk-report.json",
+    "db:backup": "bash scripts/backup.sh",
+    "db:backup:compressed": "bash scripts/backup.sh -c",
+    "db:restore": "bash scripts/restore.sh",
+    "db:restore:latest": "bash scripts/restore.sh --latest",
+    "db:backups:list": "bash scripts/restore.sh --list",
+    "db:init": "bash scripts/init-db.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -25,7 +31,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
-    "pino": "^10.1.0"
+    "pino": "^10.1.0",
+    "prom-client": "^15.1.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -40,6 +47,7 @@
     "@vitest/ui": "^1.6.0",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.0.0",
     "nock": "^14.0.10",
     "prettier": "^3.6.2",
     "prisma": "^5.22.0",

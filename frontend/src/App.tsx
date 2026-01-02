@@ -11,12 +11,13 @@ import CryptoChart from "./components/CryptoChart";
 import AlertsPanel from "./components/AlertsPanel";
 import ForecastChart from "./components/ForecastChart";
 import PortfolioPanel from "./components/PortfolioPanel";
+import AdminDashboard from "./components/AdminDashboard";
 import "./App.css";
 import CandlestickChart from "./components/CandlestickChart";
 import { fetchOhlc, type OhlcPoint } from "./lib/api";
 import { useAuth } from "./contexts/AuthContext";
 import LoginPage from "./components/LoginPage";
-type Tab = "dashboard" | "forecast" | "alerts" | "portfolio";
+type Tab = "dashboard" | "forecast" | "alerts" | "portfolio" | "admin";
 
 export default function App() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -128,6 +129,15 @@ export default function App() {
             <span className="nav-icon"></span>
             portefeuille
           </button>
+          {user.role === "ADMIN" && (
+            <button
+              className={`nav-tab ${activeTab === "admin" ? "active" : ""}`}
+              onClick={() => setActiveTab("admin")}
+            >
+              <span className="nav-icon"></span>
+              Admin
+            </button>
+          )}
         </nav>
         <div className="user-info">
           <span className="user-name"> {user.name || user.email}</span>
@@ -207,6 +217,7 @@ export default function App() {
         {activeTab === "forecast" && <ForecastChart />}
         {activeTab === "alerts" && <AlertsPanel />}
         {activeTab === "portfolio" && <PortfolioPanel />}
+        {activeTab === "admin" && user.role === "ADMIN" && <AdminDashboard />}
       </main>
     </div>
   );

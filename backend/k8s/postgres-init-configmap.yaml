@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: gla-crypto
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+data:
+  init-db.sql: |
+    -- ============================================
+    -- PostgreSQL Init Script - GLA Crypto Tracker
+    -- ============================================
+
+    -- Extensions
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+    CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+    -- Timezone
+    SET timezone = 'UTC';
+
+    -- Rôle read-only pour monitoring
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'readonly') THEN
+            CREATE ROLE readonly;
+        END IF;
+    END
+    $$;
+
+    GRANT USAGE ON SCHEMA public TO readonly;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO readonly;
+
+    -- Fonction pour mettre à jour automatiquement updatedAt
+    CREATE OR REPLACE FUNCTION update_updated_at_column()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        NEW."updatedAt" = CURRENT_TIMESTAMP;
+        RETURN NEW;
+    END;
+    $$ language 'plpgsql';
+
+    -- Fonction pour calculer le pourcentage de changement
+    CREATE OR REPLACE FUNCTION calculate_price_change(
+        old_price DECIMAL,
+        new_price DECIMAL
+    ) RETURNS DECIMAL AS $$
+    BEGIN
+        IF old_price IS NULL OR old_price = 0 THEN
+            RETURN 0;
+        END IF;
+        RETURN ROUND(((new_price - old_price) / old_price * 100)::numeric, 2);
+    END;
+    $$ LANGUAGE plpgsql IMMUTABLE;
+
+    -- Fonction pour formater les montants
+    CREATE OR REPLACE FUNCTION format_currency(
+        amount DECIMAL,
+        currency VARCHAR DEFAULT 'USD'
+    ) RETURNS VARCHAR AS $$
+    BEGIN
+        RETURN CASE currency
+            WHEN 'USD' THEN '$' || TO_CHAR(amount, 'FM999,999,999.00')
+            WHEN 'EUR' THEN TO_CHAR(amount, 'FM999,999,999.00') || '€'
+            ELSE TO_CHAR(amount, 'FM999,999,999.00') || ' ' || currency
+        END;
+    END;
+    $$ LANGUAGE plpgsql IMMUTABLE;
+
+    -- Message de confirmation
+    DO $$
+    BEGIN
+        RAISE NOTICE 'GLA Crypto Database initialized successfully!';
+    END
+    $$;

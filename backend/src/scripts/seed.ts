@@ -1,4 +1,5 @@
 import { prisma } from "../repos/prisma.js";
+import bcrypt from "bcryptjs";
 
 // Données mock pour 5 cryptos principales
 const SEED_CRYPTOS = [
@@ -93,6 +94,20 @@ async function seed() {
       endedAt: new Date(),
     },
   });
+
+  // Créer un utilisateur admin par défaut
+  const adminPassword = await bcrypt.hash("admin123", 10);
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@crypto.local" },
+    update: {},
+    create: {
+      email: "admin@crypto.local",
+      password: adminPassword,
+      name: "Administrateur",
+      role: "ADMIN",
+    },
+  });
+  console.log(`  ✓ Admin créé: ${admin.email} (mot de passe: admin123)`);
 
   console.log(`\n✅ Seed completed: ${SEED_CRYPTOS.length} cryptos loaded`);
 }

@@ -88,7 +88,7 @@ export const AuthService = {
     try {
       const decoded = jwt.verify(token, env.jwtSecret) as JwtPayload;
       return decoded;
-    } catch (error) {
+    } catch (_error) {
       throw new Error("Token invalide ou expiré");
     }
   },

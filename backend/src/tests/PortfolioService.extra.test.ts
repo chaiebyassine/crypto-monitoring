@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as PortfolioService from "../services/PortfolioService.js";
+// PortfolioService module is mocked below
 
 describe("PortfolioService (extra coverage)", () => {
   const mockPrisma = {

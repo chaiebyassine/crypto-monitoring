@@ -3,19 +3,22 @@ import cors from "cors";
 import { prisma } from "../repos/prisma.js";
 import { runOnce } from "../services/CollectService.js";
 import { AuthService } from "../services/AuthService.js";
+import { AdminService } from "../services/AdminService.js";
 import { authenticate, authorize } from "../middlewares/auth.js";
+import { metricsMiddleware } from "../middlewares/metrics.js";
+import { register } from "../metrics/prometheus.js";
 import {
-  createAlert,
+  createAlert as _createAlert,
   deactivateAlert,
-  getActiveAlerts,
-  getAlertsByAsset,
+  getActiveAlerts as _getActiveAlerts,
+  getAlertsByAsset as _getAlertsByAsset,
   type AlertType,
 } from "../services/AlertService.js";
 import { generateForecast, type ForecastMethod } from "../services/ForecastService.js";
 import {
-  createPortfolio,
-  getPortfolios,
-  getPortfolio,
+  createPortfolio as _createPortfolio,
+  getPortfolios as _getPortfolios,
+  getPortfolio as _getPortfolio,
   executeTrade,
   getPortfolioPnL,
   getTradeHistory,
@@ -27,6 +30,38 @@ export function createServer() {
 
   app.use(cors({ origin: true }));
   app.use(express.json());
+
+  // Middleware de métriques Prometheus (avant les routes)
+  app.use(metricsMiddleware);
+
+  // Health check endpoint pour Kubernetes
+  app.get("/health", async (_req, res) => {
+    try {
+      // Vérifier la connexion à la base de données
+      await prisma.$queryRaw`SELECT 1`;
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    } catch (_err) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Database connection failed",
+      });
+    }
+  });
+
+  // Endpoint pour Prometheus
+  app.get("/metrics", async (_req, res) => {
+    try {
+      res.set("Content-Type", register.contentType);
+      res.end(await register.metrics());
+    } catch (_err) {
+      res.status(500).end();
+    }
+  });
 
   app.post("/auth/register", async (req, res) => {
     try {
@@ -113,6 +148,136 @@ export function createServer() {
       res.json({ data: users });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // ============================================
+  // ADMIN ENDPOINTS
+  // ============================================
+
+  // Récupérer les statistiques admin
+  app.get("/admin/stats", authenticate, authorize("ADMIN"), async (_req, res) => {
+    try {
+      const stats = await AdminService.getStats();
+      res.json({ data: stats });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Récupérer tous les utilisateurs (avec pagination et filtres)
+  app.get("/admin/users", authenticate, authorize("ADMIN"), async (req, res) => {
+    try {
+      const { search, role, page, limit } = req.query;
+      const result = await AdminService.getUsers({
+        search: search as string,
+        role: role as "USER" | "ADMIN",
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+      res.json({ data: result });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Récupérer un utilisateur par ID
+  app.get("/admin/users/:id", authenticate, authorize("ADMIN"), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "ID utilisateur invalide" });
+      }
+      const user = await AdminService.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "Utilisateur non trouvé" });
+      }
+      res.json({ data: user });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Créer un utilisateur
+  app.post("/admin/users", authenticate, authorize("ADMIN"), async (req, res) => {
+    try {
+      const { email, password, name, role } = req.body;
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email requis" });
+      }
+      if (!password || typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ error: "Mot de passe requis (min 6 caractères)" });
+      }
+
+      const user = await AdminService.createUser(email, password, name, role);
+      res.status(201).json({ data: user });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes("existe déjà")) {
+        return res.status(409).json({ error: message });
+      }
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Mettre à jour un utilisateur
+  app.patch("/admin/users/:id", authenticate, authorize("ADMIN"), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "ID utilisateur invalide" });
+      }
+
+      const { email, name, role, password } = req.body;
+      const updateData: any = {};
+
+      if (email !== undefined) updateData.email = email;
+      if (name !== undefined) updateData.name = name;
+      if (role !== undefined) updateData.role = role;
+      if (password !== undefined) {
+        if (password.length < 6) {
+          return res.status(400).json({ error: "Mot de passe trop court (min 6 caractères)" });
+        }
+        updateData.password = password;
+      }
+
+      const user = await AdminService.updateUser(userId, updateData, req.user!.userId);
+      res.json({ data: user });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes("non trouvé")) {
+        return res.status(404).json({ error: message });
+      }
+      if (message.includes("existe déjà") || message.includes("propre rôle")) {
+        return res.status(400).json({ error: message });
+      }
+      res.status(500).json({ error: message });
+    }
+  });
+
+  // Supprimer un utilisateur
+  app.delete("/admin/users/:id", authenticate, authorize("ADMIN"), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "ID utilisateur invalide" });
+      }
+
+      await AdminService.deleteUser(userId, req.user!.userId);
+      res.json({ ok: true, message: "Utilisateur supprimé" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes("non trouvé")) {
+        return res.status(404).json({ error: message });
+      }
+      if (message.includes("propre compte")) {
+        return res.status(400).json({ error: message });
+      }
       res.status(500).json({ error: message });
     }
   });
