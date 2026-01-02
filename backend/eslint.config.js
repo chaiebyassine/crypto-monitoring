@@ -6,6 +6,9 @@ import globals from "globals";
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
 export default [
+  {
+    ignores: ["dist/**", "coverage/**", "node_modules/**"],
+  },
   js.configs.recommended,
   {
     files: ["**/*.ts", "**/*.tsx"],

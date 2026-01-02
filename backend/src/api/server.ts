@@ -33,6 +33,25 @@ export function createServer() {
   // Middleware de métriques Prometheus (avant les routes)
   app.use(metricsMiddleware);
 
+  // Health check endpoint pour Kubernetes
+  app.get("/health", async (_req, res) => {
+    try {
+      // Vérifier la connexion à la base de données
+      await prisma.$queryRaw`SELECT 1`;
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    } catch (_err) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Database connection failed",
+      });
+    }
+  });
+
   // Endpoint pour Prometheus
   app.get("/metrics", async (_req, res) => {
     try {
