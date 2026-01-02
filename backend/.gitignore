@@ -3,3 +3,7 @@ dist
 .env
 
 /src/generated/prisma
+# Rapports générés
+coverage/
+snyk-report.json
+.scannerwork/

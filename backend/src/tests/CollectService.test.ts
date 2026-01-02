@@ -18,20 +18,18 @@ describe("CollectService", () => {
     },
   };
   const mockEnv = { coins: ["bitcoin"], provider: "mock", useMockFallback: false };
-  const mockFetchFromMock = vi
-    .fn()
-    .mockResolvedValue([
-      {
-        providerId: "bitcoin",
-        source: "mock",
-        symbol: "bitcoin",
-        name: "Bitcoin",
-        priceUsd: 100,
-        volume24hUsd: 1000,
-        marketCapUsd: 10000,
-        change24hPct: 1.5,
-      },
-    ]);
+  const mockFetchFromMock = vi.fn().mockResolvedValue([
+    {
+      providerId: "bitcoin",
+      source: "mock",
+      symbol: "bitcoin",
+      name: "Bitcoin",
+      priceUsd: 100,
+      volume24hUsd: 1000,
+      marketCapUsd: 10000,
+      change24hPct: 1.5,
+    },
+  ]);
   const mockEvaluateAlerts = vi.fn().mockResolvedValue({ evaluated: 1, triggered: 1 });
 
   beforeEach(() => {
