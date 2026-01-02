@@ -13,6 +13,12 @@ services:
       - "5432:5432"
     volumes:
       - gla-db-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gla_user -d gla_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: .

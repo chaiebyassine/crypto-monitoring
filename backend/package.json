@@ -15,7 +15,13 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "security": "snyk test",
-    "security:report": "snyk test --json > snyk-report.json"
+    "security:report": "snyk test --json > snyk-report.json",
+    "db:backup": "bash scripts/backup.sh",
+    "db:backup:compressed": "bash scripts/backup.sh -c",
+    "db:restore": "bash scripts/restore.sh",
+    "db:restore:latest": "bash scripts/restore.sh --latest",
+    "db:backups:list": "bash scripts/restore.sh --list",
+    "db:init": "bash scripts/init-db.sh"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
