@@ -146,14 +146,46 @@ async function triggerAlert(alert: AlertWithAsset, latest: LatestPrice): Promise
     console.error(`Alert ${alert.id} triggered but notification failed: ${notifyResult.errorMsg}`);
   }
 }
-export async function createAlert(assetId: number, type: AlertType, threshold: number) {
+export async function createAlert(userId: number, assetId: number, type: AlertType, threshold: number) {
   return prisma.alert.create({
     data: {
+      userId,
       assetId,
       type,
       threshold,
       isActive: true,
     },
+    include: { asset: true },
+  });
+}
+
+export async function getAlertById(alertId: number) {
+  return prisma.alert.findUnique({
+    where: { id: alertId },
+    include: {
+      asset: true,
+      notifications: { take: 10, orderBy: { sentAt: "desc" } },
+    },
+  });
+}
+
+export async function getUserAlerts(userId: number, filters?: { assetId?: number; activeOnly?: boolean }) {
+  const where: { userId: number; assetId?: number; isActive?: boolean } = { userId };
+  if (filters?.assetId) where.assetId = filters.assetId;
+  if (filters?.activeOnly) where.isActive = true;
+
+  return prisma.alert.findMany({
+    where,
+    include: { asset: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function activateAlert(alertId: number) {
+  return prisma.alert.update({
+    where: { id: alertId },
+    data: { isActive: true },
+    include: { asset: true },
   });
 }
 
@@ -161,7 +193,13 @@ export async function deactivateAlert(alertId: number) {
   return prisma.alert.update({
     where: { id: alertId },
     data: { isActive: false },
+    include: { asset: true },
   });
+}
+
+export async function deleteAlert(alertId: number) {
+  await prisma.notificationLog.deleteMany({ where: { alertId } });
+  await prisma.alert.delete({ where: { id: alertId } });
 }
 
 export async function getAlertsByAsset(assetId: number) {

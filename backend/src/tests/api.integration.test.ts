@@ -82,8 +82,10 @@ vi.mock("../services/ForecastService.js", () => ({
 // Mock PortfolioService
 const mockPortfolioService = vi.hoisted(() => ({
   createPortfolio: vi.fn(),
-  getPortfolios: vi.fn(),
+  getPortfoliosByUser: vi.fn(),
   getPortfolio: vi.fn(),
+  deletePortfolio: vi.fn(),
+  getPortfolioPositions: vi.fn(),
   executeTrade: vi.fn(),
   getPortfolioPnL: vi.fn(),
   getTradeHistory: vi.fn(),
@@ -559,7 +561,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner les portfolios de l'utilisateur", async () => {
-        mockPrisma.portfolio.findMany.mockResolvedValue([
+        mockPortfolioService.getPortfoliosByUser.mockResolvedValue([
           { id: 1, name: "Mon Portfolio", userId: 1 },
         ]);
 
@@ -574,7 +576,7 @@ describe("API Integration Tests", () => {
 
     describe("POST /portfolios", () => {
       it("devrait créer un nouveau portfolio", async () => {
-        mockPrisma.portfolio.create.mockResolvedValue({
+        mockPortfolioService.createPortfolio.mockResolvedValue({
           id: 1,
           name: "Nouveau Portfolio",
           userId: 1,
@@ -601,7 +603,7 @@ describe("API Integration Tests", () => {
 
     describe("GET /portfolios/:id", () => {
       it("devrait retourner un portfolio par ID", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({
+        mockPortfolioService.getPortfolio.mockResolvedValue({
           id: 1,
           name: "Mon Portfolio",
           userId: 1,
@@ -617,7 +619,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner 404 pour portfolio non trouvé", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue(null);
+        mockPortfolioService.getPortfolio.mockResolvedValue(null);
 
         const res = await request(app)
           .get("/portfolios/999")
@@ -629,10 +631,8 @@ describe("API Integration Tests", () => {
 
     describe("DELETE /portfolios/:id", () => {
       it("devrait supprimer un portfolio", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
-        mockPrisma.trade.deleteMany.mockResolvedValue({ count: 0 });
-        mockPrisma.position.deleteMany.mockResolvedValue({ count: 0 });
-        mockPrisma.portfolio.delete.mockResolvedValue({ id: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.deletePortfolio.mockResolvedValue({ id: 1 });
 
         const res = await request(app)
           .delete("/portfolios/1")
@@ -645,7 +645,7 @@ describe("API Integration Tests", () => {
 
     describe("GET /portfolios/:id/pnl", () => {
       it("devrait retourner le PnL du portfolio", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
         mockPortfolioService.getPortfolioPnL.mockResolvedValue({
           totalValue: 10000,
           totalCost: 9000,
@@ -664,8 +664,8 @@ describe("API Integration Tests", () => {
 
     describe("GET /portfolios/:id/positions", () => {
       it("devrait retourner les positions du portfolio", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
-        mockPrisma.position.findMany.mockResolvedValue([
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolioPositions.mockResolvedValue([
           { id: 1, assetId: 1, quantity: 0.5, avgCost: 97000, asset: { symbol: "bitcoin" } },
         ]);
 
@@ -680,7 +680,7 @@ describe("API Integration Tests", () => {
 
     describe("GET /portfolios/:id/trades", () => {
       it("devrait retourner l'historique des trades", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
         mockPortfolioService.getTradeHistory.mockResolvedValue([
           { id: 1, side: "buy", quantity: 0.5, priceUsd: 97000 },
         ]);
@@ -696,7 +696,7 @@ describe("API Integration Tests", () => {
 
     describe("POST /portfolios/:id/trades", () => {
       it("devrait exécuter un trade", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
         mockPortfolioService.executeTrade.mockResolvedValue({
           trade: { id: 1, side: "buy", quantity: 0.5, priceUsd: 97000 },
           position: { quantity: 0.5 },
@@ -711,7 +711,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner 400 pour side invalide", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
 
         const res = await request(app)
           .post("/portfolios/1/trades")
@@ -722,7 +722,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner 400 pour quantité négative", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
 
         const res = await request(app)
           .post("/portfolios/1/trades")
@@ -733,7 +733,7 @@ describe("API Integration Tests", () => {
       });
 
       it("devrait retourner 400 pour position insuffisante (sell)", async () => {
-        mockPrisma.portfolio.findUnique.mockResolvedValue({ id: 1, userId: 1 });
+        mockPortfolioService.getPortfolio.mockResolvedValue({ id: 1, userId: 1 });
         mockPortfolioService.executeTrade.mockRejectedValue(new Error("Insufficient position"));
 
         const res = await request(app)

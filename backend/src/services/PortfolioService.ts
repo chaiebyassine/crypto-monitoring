@@ -55,14 +55,15 @@ export interface PortfolioPnL {
   };
 }
 
-export async function createPortfolio(name: string) {
+export async function createPortfolio(name: string, userId: number) {
   return prisma.portfolio.create({
-    data: { name },
+    data: { name, userId },
   });
 }
 
-export async function getPortfolios() {
+export async function getPortfoliosByUser(userId: number) {
   return prisma.portfolio.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -74,6 +75,20 @@ export async function getPortfolio(id: number) {
       positions: { include: { asset: true } },
       trades: { orderBy: { executedAt: "desc" }, take: 50 },
     },
+  });
+}
+
+export async function deletePortfolio(portfolioId: number) {
+  await prisma.trade.deleteMany({ where: { portfolioId } });
+  await prisma.position.deleteMany({ where: { portfolioId } });
+  await prisma.portfolio.delete({ where: { id: portfolioId } });
+}
+
+export async function getPortfolioPositions(portfolioId: number) {
+  return prisma.position.findMany({
+    where: { portfolioId },
+    include: { asset: true },
+    orderBy: { updatedAt: "desc" },
   });
 }
 
