@@ -7,9 +7,7 @@ import routes from "../routes/index.js";
 export function createServer() {
   const app = express();
 
-  // ============================================
-  // MIDDLEWARES GLOBAUX
-  // ============================================
+  
   
   app.use(cors({ origin: true }));
   

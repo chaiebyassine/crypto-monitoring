@@ -13,13 +13,9 @@ import {
 
 const router = Router();
 
-// Tous les endpoints alerts nécessitent une authentification
 router.use(authenticate);
 
-/**
- * GET /alerts
- * Liste les alertes de l'utilisateur connecté
- */
+
 router.get("/", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -34,10 +30,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-/**
- * GET /alerts/:id
- * Récupère une alerte par ID
- */
+
 router.get("/:id", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -58,10 +51,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-/**
- * POST /alerts
- * Crée une nouvelle alerte
- */
 router.post("/", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -93,10 +82,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-/**
- * PATCH /alerts/:id/activate
- * Active une alerte
- */
 router.patch("/:id/activate", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -121,10 +106,7 @@ router.patch("/:id/activate", async (req, res) => {
   }
 });
 
-/**
- * PATCH /alerts/:id/deactivate
- * Désactive une alerte
- */
+
 router.patch("/:id/deactivate", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -149,10 +131,7 @@ router.patch("/:id/deactivate", async (req, res) => {
   }
 });
 
-/**
- * DELETE /alerts/:id
- * Supprime une alerte
- */
+
 router.delete("/:id", async (req, res) => {
   try {
     const userId = req.user!.userId;
