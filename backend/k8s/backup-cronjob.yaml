@@ -30,10 +30,10 @@ spec:
                   set -e
                   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
                   BACKUP_FILE="/backups/${POSTGRES_DB}_${TIMESTAMP}.sql.gz"
-                  
+
                   echo "[INFO] Starting backup of database: ${POSTGRES_DB}"
                   echo "[INFO] Destination: ${BACKUP_FILE}"
-                  
+
                   # Effectuer le dump et compresser
                   PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
                     -h "${POSTGRES_HOST}" \
@@ -42,7 +42,7 @@ spec:
                     --no-owner \
                     --no-privileges \
                     | gzip > "${BACKUP_FILE}"
-                  
+
                   # Vérifier que le fichier a été créé
                   if [ -f "${BACKUP_FILE}" ]; then
                     SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
@@ -51,11 +51,11 @@ spec:
                     echo "[ERROR] Backup failed!"
                     exit 1
                   fi
-                  
+
                   # Nettoyer les backups de plus de 7 jours
                   echo "[INFO] Cleaning old backups..."
                   find /backups -name "${POSTGRES_DB}_*.sql.gz" -mtime +7 -delete
-                  
+
                   echo "[INFO] Current backups:"
                   ls -la /backups/
               env:

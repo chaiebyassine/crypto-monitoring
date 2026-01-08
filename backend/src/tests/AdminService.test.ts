@@ -4,7 +4,6 @@ import { prisma } from "../repos/prisma.js";
 
 describe("AdminService", () => {
   beforeEach(async () => {
-    // Nettoyer les données de test
     await prisma.notificationLog.deleteMany();
     await prisma.trade.deleteMany();
     await prisma.position.deleteMany();
@@ -86,7 +85,12 @@ describe("AdminService", () => {
 
   describe("createUser", () => {
     it("should create a new user", async () => {
-      const result = await AdminService.createUser("new@test.com", "password123", "New User", "USER");
+      const result = await AdminService.createUser(
+        "new@test.com",
+        "password123",
+        "New User",
+        "USER"
+      );
 
       expect(result.email).toBe("new@test.com");
       expect(result.name).toBe("New User");
@@ -94,7 +98,12 @@ describe("AdminService", () => {
     });
 
     it("should create an admin user", async () => {
-      const result = await AdminService.createUser("admin@test.com", "password123", "Admin", "ADMIN");
+      const result = await AdminService.createUser(
+        "admin@test.com",
+        "password123",
+        "Admin",
+        "ADMIN"
+      );
 
       expect(result.role).toBe("ADMIN");
     });
@@ -104,9 +113,9 @@ describe("AdminService", () => {
         data: { email: "existing@test.com", password: "hash", role: "USER" },
       });
 
-      await expect(
-        AdminService.createUser("existing@test.com", "password123")
-      ).rejects.toThrow("existe déjà");
+      await expect(AdminService.createUser("existing@test.com", "password123")).rejects.toThrow(
+        "existe déjà"
+      );
     });
   });
 
@@ -147,15 +156,15 @@ describe("AdminService", () => {
         data: { email: "admin@test.com", password: "hash", role: "ADMIN" },
       });
 
-      await expect(
-        AdminService.updateUser(admin.id, { role: "USER" }, admin.id)
-      ).rejects.toThrow("propre rôle");
+      await expect(AdminService.updateUser(admin.id, { role: "USER" }, admin.id)).rejects.toThrow(
+        "propre rôle"
+      );
     });
 
     it("should throw error for non-existent user", async () => {
-      await expect(
-        AdminService.updateUser(99999, { name: "Test" }, 1)
-      ).rejects.toThrow("non trouvé");
+      await expect(AdminService.updateUser(99999, { name: "Test" }, 1)).rejects.toThrow(
+        "non trouvé"
+      );
     });
 
     it("should throw error for duplicate email", async () => {

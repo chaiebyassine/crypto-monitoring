@@ -5,10 +5,6 @@ import { prisma } from "../repos/prisma.js";
 
 const router = Router();
 
-/**
- * POST /auth/register
- * Inscription d'un nouvel utilisateur
- */
 router.post("/register", async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -31,10 +27,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-/**
- * POST /auth/login
- * Connexion d'un utilisateur
- */
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -54,10 +46,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-/**
- * GET /auth/me
- * Récupère les informations de l'utilisateur connecté
- */
 router.get("/me", authenticate, async (req, res) => {
   try {
     const user = await AuthService.getUserById(req.user!.userId);
@@ -68,10 +56,6 @@ router.get("/me", authenticate, async (req, res) => {
   }
 });
 
-/**
- * PATCH /auth/password
- * Modification du mot de passe
- */
 router.patch("/password", authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -91,10 +75,6 @@ router.patch("/password", authenticate, async (req, res) => {
   }
 });
 
-/**
- * GET /auth/users
- * Liste tous les utilisateurs (Admin only) - Legacy endpoint
- */
 router.get("/users", authenticate, authorize("ADMIN"), async (_req, res) => {
   try {
     const users = await prisma.user.findMany({

@@ -10,29 +10,21 @@ import healthRoutes from "./health.routes.js";
 
 const router = Router();
 
-// Health & Metrics (/, /health, /metrics, /collect)
 router.use("/", healthRoutes);
 
-// Auth routes (/auth/*)
 router.use("/auth", authRoutes);
 
-// Admin routes (/admin/*)
 router.use("/admin", adminRoutes);
 
-// Asset routes (/assets)
 router.use("/assets", assetRoutes);
 
-// Price routes (/prices, /prices/ohlc, /changes)
 router.use("/prices", priceRoutes);
-router.use("/", priceRoutes); // Pour /changes
+router.use("/", priceRoutes);
 
-// Alert routes (/alerts/*)
 router.use("/alerts", alertRoutes);
 
-// Portfolio routes (/portfolios/*)
 router.use("/portfolios", portfolioRoutes);
 
-// Forecast routes (/forecast)
 router.use("/forecast", forecastRoutes);
 
 export default router;

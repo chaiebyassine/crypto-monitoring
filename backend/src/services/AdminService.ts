@@ -32,9 +32,6 @@ export interface UserFilters {
 const SALT_ROUNDS = 10;
 
 export const AdminService = {
-  /**
-   * Récupère tous les utilisateurs avec pagination et filtres
-   */
   async getUsers(filters: UserFilters = {}): Promise<{
     users: UserInfo[];
     total: number;
@@ -89,9 +86,6 @@ export const AdminService = {
     };
   },
 
-  /**
-   * Récupère un utilisateur par ID
-   */
   async getUserById(userId: number): Promise<UserInfo | null> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -114,11 +108,7 @@ export const AdminService = {
     return user;
   },
 
-  /**
-   * Met à jour un utilisateur
-   */
   async updateUser(userId: number, data: UpdateUserData, adminId: number): Promise<UserInfo> {
-    // Vérifier que l'utilisateur existe
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -127,12 +117,10 @@ export const AdminService = {
       throw new Error("Utilisateur non trouvé");
     }
 
-    // Empêcher un admin de modifier son propre rôle
     if (userId === adminId && data.role && data.role !== existingUser.role) {
       throw new Error("Vous ne pouvez pas modifier votre propre rôle");
     }
 
-    // Vérifier l'unicité de l'email si modifié
     if (data.email && data.email !== existingUser.email) {
       const emailExists = await prisma.user.findUnique({
         where: { email: data.email },
@@ -142,7 +130,6 @@ export const AdminService = {
       }
     }
 
-    // Hasher le mot de passe si fourni
     const updateData: any = { ...data };
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, SALT_ROUNDS);
@@ -170,11 +157,7 @@ export const AdminService = {
     return updatedUser;
   },
 
-  /**
-   * Supprime un utilisateur
-   */
   async deleteUser(userId: number, adminId: number): Promise<void> {
-    // Empêcher un admin de se supprimer lui-même
     if (userId === adminId) {
       throw new Error("Vous ne pouvez pas supprimer votre propre compte");
     }
@@ -187,32 +170,26 @@ export const AdminService = {
       throw new Error("Utilisateur non trouvé");
     }
 
-    // Récupérer les IDs des portfolios de l'utilisateur
     const portfolios = await prisma.portfolio.findMany({
       where: { userId: userId },
       select: { id: true },
     });
     const portfolioIds = portfolios.map((p) => p.id);
 
-    // Supprimer en cascade les données liées
     await prisma.$transaction([
-      // Supprimer les trades liés aux portfolios
       prisma.trade.deleteMany({
         where: {
           portfolioId: { in: portfolioIds },
         },
       }),
-      // Supprimer les positions
       prisma.position.deleteMany({
         where: {
           portfolioId: { in: portfolioIds },
         },
       }),
-      // Supprimer les portfolios
       prisma.portfolio.deleteMany({
         where: { userId: userId },
       }),
-      // Supprimer les notifications des alertes
       prisma.notificationLog.deleteMany({
         where: {
           alert: {
@@ -220,20 +197,15 @@ export const AdminService = {
           },
         },
       }),
-      // Supprimer les alertes
       prisma.alert.deleteMany({
         where: { userId: userId },
       }),
-      // Supprimer l'utilisateur
       prisma.user.delete({
         where: { id: userId },
       }),
     ]);
   },
 
-  /**
-   * Récupère les statistiques des utilisateurs
-   */
   async getStats(): Promise<{
     totalUsers: number;
     adminCount: number;
@@ -261,9 +233,6 @@ export const AdminService = {
     };
   },
 
-  /**
-   * Crée un utilisateur (par un admin)
-   */
   async createUser(
     email: string,
     password: string,

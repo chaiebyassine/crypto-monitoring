@@ -12,10 +12,10 @@ import {
 } from "../lib/api";
 
 const ALERT_TYPES: { value: AlertType; label: string; icon: string }[] = [
-  { value: "price_above", label: "Prix supérieur à", icon: "📈" },
-  { value: "price_below", label: "Prix inférieur à", icon: "📉" },
-  { value: "change_above", label: "Variation 24h supérieure à", icon: "🚀" },
-  { value: "change_below", label: "Variation 24h inférieure à", icon: "⚠️" },
+  { value: "price_above", label: "Prix supérieur à", icon: "" },
+  { value: "price_below", label: "Prix inférieur à", icon: "" },
+  { value: "change_above", label: "Variation 24h supérieure à", icon: "" },
+  { value: "change_below", label: "Variation 24h inférieure à", icon: "" },
 ];
 
 export default function AlertsPanel() {
@@ -118,7 +118,6 @@ export default function AlertsPanel() {
     <div className="panel alerts-panel">
       <div className="panel-header">
         <h2 className="panel-title">
-          <span className="panel-icon">🔔</span>
           Alertes de Prix
         </h2>
         <span className="panel-badge">{alerts.length} alertes</span>
@@ -188,7 +187,7 @@ export default function AlertsPanel() {
       <div className="alerts-list">
         {alerts.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon">🔕</span>
+            
             <p>Aucune alerte. Créez-en une pour commencer !</p>
           </div>
         ) : (
@@ -229,7 +228,7 @@ export default function AlertsPanel() {
                     onClick={() => handleDelete(alert.id)}
                     title="Supprimer l'alerte"
                   >
-                    🗑️
+                    Supprimer
                   </button>
                 </div>
               </div>

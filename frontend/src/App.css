@@ -224,6 +224,15 @@
   color: #4a5568;
 }
 
+/* Prix en lecture seule - utilise le prix du marché */
+.form-input.price-readonly {
+  background: #1a202c;
+  border-color: #4a5568;
+  color: #60efff;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
 .form-select {
   cursor: pointer;
   appearance: none;

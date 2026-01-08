@@ -6,7 +6,6 @@ const router = Router();
 
 router.use(authenticate, authorize("ADMIN"));
 
-
 router.get("/stats", async (_req, res) => {
   try {
     const stats = await AdminService.getStats();
@@ -16,7 +15,6 @@ router.get("/stats", async (_req, res) => {
     res.status(500).json({ error: message });
   }
 });
-
 
 router.get("/users", async (req, res) => {
   try {
@@ -50,7 +48,6 @@ router.get("/users/:id", async (req, res) => {
     res.status(500).json({ error: message });
   }
 });
-
 
 router.post("/users", async (req, res) => {
   try {
@@ -107,7 +104,6 @@ router.patch("/users/:id", async (req, res) => {
     res.status(500).json({ error: message });
   }
 });
-
 
 router.delete("/users/:id", async (req, res) => {
   try {

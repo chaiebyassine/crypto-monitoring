@@ -14,13 +14,8 @@ import {
 
 const router = Router();
 
-// Tous les endpoints portfolios nécessitent une authentification
 router.use(authenticate);
 
-/**
- * GET /portfolios
- * Liste les portfolios de l'utilisateur connecté
- */
 router.get("/", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -32,10 +27,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-/**
- * GET /portfolios/:id
- * Récupère un portfolio par ID avec ses positions
- */
 router.get("/:id", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -56,10 +47,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-/**
- * POST /portfolios
- * Crée un nouveau portfolio
- */
 router.post("/", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -77,10 +64,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-/**
- * DELETE /portfolios/:id
- * Supprime un portfolio et toutes ses données associées
- */
 router.delete("/:id", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -105,10 +88,6 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-/**
- * GET /portfolios/:id/pnl
- * Calcule le PnL (Profit & Loss) du portfolio
- */
 router.get("/:id/pnl", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -134,10 +113,6 @@ router.get("/:id/pnl", async (req, res) => {
   }
 });
 
-/**
- * GET /portfolios/:id/positions
- * Liste les positions du portfolio
- */
 router.get("/:id/positions", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -159,10 +134,6 @@ router.get("/:id/positions", async (req, res) => {
   }
 });
 
-/**
- * GET /portfolios/:id/trades
- * Historique des trades du portfolio
- */
 router.get("/:id/trades", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -186,10 +157,6 @@ router.get("/:id/trades", async (req, res) => {
   }
 });
 
-/**
- * POST /portfolios/:id/trades
- * Exécute un nouveau trade (achat ou vente)
- */
 router.post("/:id/trades", async (req, res) => {
   try {
     const userId = req.user!.userId;

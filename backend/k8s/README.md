@@ -103,6 +103,7 @@ kubectl port-forward svc/postgres 5432:5432 -n gla-crypto
 ### Via Ingress (production)
 
 Ajouter dans `/etc/hosts` :
+
 ```
 <INGRESS_IP> api.gla-crypto.local
 ```

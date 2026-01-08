@@ -234,7 +234,7 @@ export default function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <h2>👥 Gestion des Utilisateurs</h2>
+        <h2>Gestion des Utilisateurs</h2>
         <button className="btn-primary" onClick={openCreateModal}>
           + Nouvel Utilisateur
         </button>
@@ -341,7 +341,7 @@ export default function AdminDashboard() {
                         onClick={() => openDeleteModal(user)}
                         title="Supprimer"
                       >
-                        🗑️
+                        Supprimer
                       </button>
                     </td>
                   </tr>
@@ -503,7 +503,7 @@ export default function AdminDashboard() {
       {showDeleteModal && selectedUser && (
         <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
           <div className="modal modal-delete" onClick={(e) => e.stopPropagation()}>
-            <h3>⚠️ Confirmer la suppression</h3>
+            <h3>Confirmer la suppression</h3>
             <p>
               Êtes-vous sûr de vouloir supprimer l'utilisateur{" "}
               <strong>{selectedUser.email}</strong> ?

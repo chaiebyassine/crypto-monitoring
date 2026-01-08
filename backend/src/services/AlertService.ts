@@ -105,12 +105,11 @@ function checkAlertCondition(
 async function triggerAlert(alert: AlertWithAsset, latest: LatestPrice): Promise<void> {
   const now = new Date();
 
-  // Désactiver l'alerte après déclenchement pour éviter les notifications répétées
   await prisma.alert.update({
     where: { id: alert.id },
     data: {
       lastTriggered: now,
-      isActive: false, // Désactive l'alerte après notification
+      isActive: false,
     },
   });
 
@@ -146,7 +145,12 @@ async function triggerAlert(alert: AlertWithAsset, latest: LatestPrice): Promise
     console.error(`Alert ${alert.id} triggered but notification failed: ${notifyResult.errorMsg}`);
   }
 }
-export async function createAlert(userId: number, assetId: number, type: AlertType, threshold: number) {
+export async function createAlert(
+  userId: number,
+  assetId: number,
+  type: AlertType,
+  threshold: number
+) {
   return prisma.alert.create({
     data: {
       userId,
@@ -169,7 +173,10 @@ export async function getAlertById(alertId: number) {
   });
 }
 
-export async function getUserAlerts(userId: number, filters?: { assetId?: number; activeOnly?: boolean }) {
+export async function getUserAlerts(
+  userId: number,
+  filters?: { assetId?: number; activeOnly?: boolean }
+) {
   const where: { userId: number; assetId?: number; isActive?: boolean } = { userId };
   if (filters?.assetId) where.assetId = filters.assetId;
   if (filters?.activeOnly) where.isActive = true;

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, afterAll as _afterAll, beforeEach, vi 
 import request from "supertest";
 import type { Express } from "express";
 
-// Mock Prisma avant d'importer le serveur
 const mockPrisma = vi.hoisted(() => ({
   $queryRaw: vi.fn(),
   asset: {
@@ -55,7 +54,6 @@ vi.mock("../repos/prisma.js", () => ({
   prisma: mockPrisma,
 }));
 
-// Mock AuthService pour les tests
 const mockAuthService = vi.hoisted(() => ({
   register: vi.fn(),
   login: vi.fn(),
@@ -68,18 +66,15 @@ vi.mock("../services/AuthService.js", () => ({
   AuthService: mockAuthService,
 }));
 
-// Mock CollectService
 vi.mock("../services/CollectService.js", () => ({
   runOnce: vi.fn().mockResolvedValue({ collected: 3 }),
 }));
 
-// Mock ForecastService
 const mockGenerateForecast = vi.hoisted(() => vi.fn());
 vi.mock("../services/ForecastService.js", () => ({
   generateForecast: mockGenerateForecast,
 }));
 
-// Mock PortfolioService
 const mockPortfolioService = vi.hoisted(() => ({
   createPortfolio: vi.fn(),
   getPortfoliosByUser: vi.fn(),
@@ -93,7 +88,6 @@ const mockPortfolioService = vi.hoisted(() => ({
 
 vi.mock("../services/PortfolioService.js", () => mockPortfolioService);
 
-// Import après les mocks
 import { createServer } from "../api/server.js";
 
 describe("API Integration Tests", () => {
@@ -107,7 +101,6 @@ describe("API Integration Tests", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Setup default mock pour authenticate middleware
     mockAuthService.verifyToken.mockImplementation((token: string) => {
       if (token === validToken) {
         return testUser;
@@ -115,8 +108,6 @@ describe("API Integration Tests", () => {
       throw new Error("Token invalide");
     });
   });
-
-  // ==================== ENDPOINTS PUBLICS ====================
 
   describe("Public Endpoints", () => {
     describe("GET /", () => {
@@ -292,8 +283,6 @@ describe("API Integration Tests", () => {
     });
   });
 
-  // ==================== ENDPOINTS AUTHENTIFICATION ====================
-
   describe("Auth Endpoints", () => {
     describe("POST /auth/register", () => {
       it("devrait créer un nouvel utilisateur", async () => {
@@ -413,8 +402,6 @@ describe("API Integration Tests", () => {
       });
     });
   });
-
-  // ==================== ENDPOINTS ALERTES ====================
 
   describe("Alerts Endpoints", () => {
     describe("GET /alerts", () => {
@@ -550,8 +537,6 @@ describe("API Integration Tests", () => {
       });
     });
   });
-
-  // ==================== ENDPOINTS PORTFOLIOS ====================
 
   describe("Portfolios Endpoints", () => {
     describe("GET /portfolios", () => {
