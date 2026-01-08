@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { AuthService, JwtPayload } from "../services/AuthService.js";
 import type { Role } from "@prisma/client";
 
-// Étendre le type Request d'Express pour inclure l'utilisateur
 declare global {
   namespace Express {
     interface Request {
@@ -11,10 +10,7 @@ declare global {
   }
 }
 
-/**
- * Middleware d'authentification - vérifie le token JWT
- * Le token doit être dans le header Authorization: Bearer <token>
- */
+
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
@@ -24,7 +20,6 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       return;
     }
 
-    // Format attendu: "Bearer <token>"
     const parts = authHeader.split(" ");
     if (parts.length !== 2 || parts[0] !== "Bearer") {
       res.status(401).json({ error: "Format de token invalide. Utilisez: Bearer <token>" });
@@ -33,10 +28,8 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 
     const token = parts[1];
 
-    // Vérifier et décoder le token
     const decoded = AuthService.verifyToken(token);
 
-    // Ajouter les infos utilisateur à la requête
     req.user = decoded;
 
     next();
@@ -45,14 +38,6 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
   }
 };
 
-/**
- * Middleware d'autorisation - vérifie que l'utilisateur a le bon rôle
- * À utiliser APRÈS le middleware authenticate
- *
- * @param allowedRoles - Liste des rôles autorisés
- *
- * Exemple: authorize("ADMIN") ou authorize("USER", "ADMIN")
- */
 export const authorize = (...allowedRoles: Role[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -73,10 +58,7 @@ export const authorize = (...allowedRoles: Role[]) => {
   };
 };
 
-/**
- * Middleware optionnel d'authentification
- * Ne bloque pas si pas de token, mais ajoute l'utilisateur si présent
- */
+
 export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
@@ -90,7 +72,6 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction): v
       }
     }
   } catch {
-    // Token invalide, on continue sans utilisateur
   }
 
   next();

@@ -239,25 +239,29 @@ describe("AlertService", () => {
     it("devrait créer une nouvelle alerte", async () => {
       const mockCreatedAlert = {
         id: 1,
-        assetId: 1,
+        userId: 1,
+        assetId: 2,
         type: "price_above",
         threshold: 100000,
         isActive: true,
         createdAt: new Date(),
+        asset: { id: 2, symbol: "btc", name: "Bitcoin" },
       };
 
       mockPrisma.alert.create.mockResolvedValue(mockCreatedAlert);
 
-      const result = await createAlert(1, "price_above", 100000);
+      const result = await createAlert(1, 2, "price_above", 100000);
 
       expect(result).toEqual(mockCreatedAlert);
       expect(mockPrisma.alert.create).toHaveBeenCalledWith({
         data: {
-          assetId: 1,
+          userId: 1,
+          assetId: 2,
           type: "price_above",
           threshold: 100000,
           isActive: true,
         },
+        include: { asset: true },
       });
     });
   });
@@ -267,6 +271,7 @@ describe("AlertService", () => {
       const mockUpdatedAlert = {
         id: 1,
         isActive: false,
+        asset: { symbol: "bitcoin" },
       };
 
       mockPrisma.alert.update.mockResolvedValue(mockUpdatedAlert);
@@ -277,6 +282,7 @@ describe("AlertService", () => {
       expect(mockPrisma.alert.update).toHaveBeenCalledWith({
         where: { id: 1 },
         data: { isActive: false },
+        include: { asset: true },
       });
     });
   });

@@ -1,12 +1,9 @@
 import client from "prom-client";
 
-// Créer un registre pour les métriques
 const register = new client.Registry();
 
-// Ajouter les métriques par défaut (CPU, mémoire, etc.)
 client.collectDefaultMetrics({ register });
 
-// Compteur de requêtes HTTP
 export const httpRequestsTotal = new client.Counter({
   name: "http_requests_total",
   help: "Nombre total de requêtes HTTP",
@@ -14,7 +11,6 @@ export const httpRequestsTotal = new client.Counter({
   registers: [register],
 });
 
-// Histogramme de durée des requêtes
 export const httpRequestDuration = new client.Histogram({
   name: "http_request_duration_seconds",
   help: "Durée des requêtes HTTP en secondes",
@@ -23,14 +19,12 @@ export const httpRequestDuration = new client.Histogram({
   registers: [register],
 });
 
-// Gauge pour les connexions actives
 export const activeConnections = new client.Gauge({
   name: "http_active_connections",
   help: "Nombre de connexions HTTP actives",
   registers: [register],
 });
 
-// Compteur d'erreurs
 export const errorsTotal = new client.Counter({
   name: "errors_total",
   help: "Nombre total d'erreurs",
@@ -38,7 +32,6 @@ export const errorsTotal = new client.Counter({
   registers: [register],
 });
 
-// Métriques métier - Crypto
 export const priceCollections = new client.Counter({
   name: "crypto_price_collections_total",
   help: "Nombre de collectes de prix effectuées",
@@ -59,12 +52,10 @@ export const tradesExecuted = new client.Counter({
   registers: [register],
 });
 
-// Gauge pour le nombre d'utilisateurs actifs
 export const activeUsers = new client.Gauge({
   name: "active_users",
   help: "Nombre d'utilisateurs avec sessions actives",
   registers: [register],
 });
 
-// Exporter le registre
 export { register };

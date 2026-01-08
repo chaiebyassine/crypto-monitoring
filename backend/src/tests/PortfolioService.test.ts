@@ -34,7 +34,7 @@ vi.mock("../repos/prisma.js", () => ({
 // Import après les mocks
 import {
   createPortfolio,
-  getPortfolios,
+  getPortfoliosByUser,
   getPortfolio,
   getTradeHistory,
 } from "../services/PortfolioService.js";
@@ -49,35 +49,38 @@ describe("PortfolioService", () => {
       const mockPortfolio = {
         id: 1,
         name: "Mon Portfolio",
-        userId: null,
+        userId: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       mockPrisma.portfolio.create.mockResolvedValue(mockPortfolio);
 
-      const result = await createPortfolio("Mon Portfolio");
+      const result = await createPortfolio("Mon Portfolio", 1);
 
       expect(result.name).toBe("Mon Portfolio");
       expect(mockPrisma.portfolio.create).toHaveBeenCalledWith({
-        data: { name: "Mon Portfolio" },
+        data: { name: "Mon Portfolio", userId: 1 },
       });
     });
   });
 
-  describe("getPortfolios", () => {
-    it("devrait retourner tous les portfolios", async () => {
+  describe("getPortfoliosByUser", () => {
+    it("devrait retourner tous les portfolios d'un utilisateur", async () => {
       const mockPortfolios = [
-        { id: 1, name: "Portfolio 1" },
-        { id: 2, name: "Portfolio 2" },
+        { id: 1, name: "Portfolio 1", userId: 1 },
+        { id: 2, name: "Portfolio 2", userId: 1 },
       ];
 
       mockPrisma.portfolio.findMany.mockResolvedValue(mockPortfolios);
 
-      const result = await getPortfolios();
+      const result = await getPortfoliosByUser(1);
 
       expect(result).toHaveLength(2);
-      expect(mockPrisma.portfolio.findMany).toHaveBeenCalled();
+      expect(mockPrisma.portfolio.findMany).toHaveBeenCalledWith({
+        where: { userId: 1 },
+        orderBy: { createdAt: "desc" },
+      });
     });
   });
 

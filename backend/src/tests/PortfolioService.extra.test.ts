@@ -72,10 +72,10 @@ describe("PortfolioService (extra coverage)", () => {
     expect(res).toBeNull();
   });
 
-  it("getPortfolios retourne un tableau", async () => {
-    mockPrisma.portfolio.findMany.mockResolvedValue([{ id: 1, name: "Test" }]);
-    const { getPortfolios } = await import("../services/PortfolioService.js");
-    const res = await getPortfolios();
+  it("getPortfoliosByUser retourne un tableau", async () => {
+    mockPrisma.portfolio.findMany.mockResolvedValue([{ id: 1, name: "Test", userId: 1 }]);
+    const { getPortfoliosByUser } = await import("../services/PortfolioService.js");
+    const res = await getPortfoliosByUser(1);
     expect(Array.isArray(res)).toBe(true);
   });
 });
