@@ -4,13 +4,9 @@ import { authenticate, authorize } from "../middlewares/auth.js";
 
 const router = Router();
 
-// Tous les endpoints admin nécessitent une authentification et le rôle ADMIN
 router.use(authenticate, authorize("ADMIN"));
 
-/**
- * GET /admin/stats
- * Statistiques générales de l'application
- */
+
 router.get("/stats", async (_req, res) => {
   try {
     const stats = await AdminService.getStats();
@@ -21,10 +17,7 @@ router.get("/stats", async (_req, res) => {
   }
 });
 
-/**
- * GET /admin/users
- * Liste tous les utilisateurs avec pagination et filtres
- */
+
 router.get("/users", async (req, res) => {
   try {
     const { search, role, page, limit } = req.query;
@@ -41,10 +34,6 @@ router.get("/users", async (req, res) => {
   }
 });
 
-/**
- * GET /admin/users/:id
- * Récupère un utilisateur par ID
- */
 router.get("/users/:id", async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
@@ -62,10 +51,7 @@ router.get("/users/:id", async (req, res) => {
   }
 });
 
-/**
- * POST /admin/users
- * Crée un nouvel utilisateur
- */
+
 router.post("/users", async (req, res) => {
   try {
     const { email, password, name, role } = req.body;
@@ -88,10 +74,6 @@ router.post("/users", async (req, res) => {
   }
 });
 
-/**
- * PATCH /admin/users/:id
- * Met à jour un utilisateur
- */
 router.patch("/users/:id", async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
@@ -126,10 +108,7 @@ router.patch("/users/:id", async (req, res) => {
   }
 });
 
-/**
- * DELETE /admin/users/:id
- * Supprime un utilisateur
- */
+
 router.delete("/users/:id", async (req, res) => {
   try {
     const userId = parseInt(req.params.id);

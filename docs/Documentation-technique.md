@@ -1,640 +1,1060 @@
-#  Sprint 1 : Collecte & Stockage
+# 🔧 Documentation Technique Complète - CryptoTracker
 
-## 1. Architecture générale du backend 
-
-L’objectif du Sprint 1 est de mettre en place un service de collecte autonome qui récupère périodiquement les données de plusieurs cryptomonnaies, les stocke dans une base PostgreSQL et trace chaque exécution de collecte.
-
-Les composants principaux sont :
-
-- **API backend (Express)** : expose des endpoints HTTP (`/health`, `/collect`, `/assets`, `/prices`, `/changes`).
-- **Service de collecte (`CollectService`)** : contient la logique d’un run de collecte (`runOnce`).
-- **Scheduler (`scheduler.ts`)** : lance `runOnce` automatiquement toutes les 60 secondes (cron).
-- **Providers externes (CoinGecko)** : appel HTTP à l’API publique de CoinGecko pour récupérer les prix.
-- **Accès base de données (Prisma)** : ORM utilisé pour lire/écrire dans PostgreSQL.
-- **Base de données PostgreSQL (Docker)** : stocke les tables `Asset`, `MarketSnapshot` et `CollectRun`.
-
-### 1.1 Schéma d’architecture (vue simple)
-![schema_architecture](./images/architecture.png)
-## 2. Modèle de données (PostgreSQL + Prisma)
-
-Le modèle de données est défini avec Prisma et migré vers PostgreSQL. Il contient trois tables principales pour le Sprint 1 (asset,marketsnapshot,collectRun).
-## 3. Déroulement d’un run de collecte (`runOnce`)
-
-Un run de collecte complet se déroule en plusieurs étapes :
-
-1. **Création d’un CollectRun**
-   - Au début de `runOnce`, une nouvelle ligne est créée dans `CollectRun` avec `status = "running"`.
-
-2. **Lecture de la configuration**
-   - La liste des cryptos à suivre est lue dans la configuration .
-
-3. **Appel au provider (CoinGecko)**
-   - Le service appelle l’API CoinGecko avec un timeout HTTP.
-   - Les données sont normalisées dans un format interne (providerId, priceUsd, volume24hUsd, etc.).
-
-4. **Écriture en base**
-   - Pour chaque enregistrement :
-     - upsert de l’`Asset` (création si besoin),
-     - insertion d’un `MarketSnapshot` lié à l’Asset.
-
-5. **Mise à jour de CollectRun**
-   - Si tout s’est bien passé : `status = "success"`, `assetsCount`, `insertedCount`, `endedAt` renseignés.
-   - En cas d’erreur : `status = "fail"`, `errorMessage` rempli, `endedAt` renseigné.
-
-6. **Logs**
-   - Le scheduler et le service loggent la durée du run, le nombre de lignes insérées et les éventuelles erreurs.
-
-Le scheduler (cron) déclenche `runOnce` automatiquement à intervalle régulier par exemple toutes les 60 secondes, avec un verrou anti-overlap pour éviter d’avoir plusieurs runs en parallèle.
-## 4. Endpoints exposés (Sprint 1)
-
-- `GET /`  
-  Retourne un message texte simple permettant de vérifier que le backend répond.
-
-- `GET /health`  
-  Vérifie l’état de l’API et de la base .
-
-- `POST /collect`  
-  Déclenche manuellement un run de collecte .
-
-- `GET /assets`  
-  Retourne la liste des actifs suivis (id, symbol, name).
-
-- `GET /prices?symbol=&limit=`  
-  Retourne l’historique des prix pour un actif donné, limité à N points.
-
-- `GET /changes`  
-  Retourne, pour chaque actif, le dernier prix connu et la variation 24h en pourcentage 
-  ## 5. Installation et lancement (Sprint 1)
-  - Node.js (version LTS)
-- Docker + Docker Compose
-- npm
-# Sprint 2 : API & Visualisation
-Le Sprint 2 a pour objectif de construire un premier **dashboard web** permettant
-d’exposer les données collectées via une API REST et de visualiser l’évolution d’un actif
-crypto dans le temps.
-
-L’architecture repose sur deux blocs principaux :
-
-- **Backend API (Node.js / Express)** : expose les endpoints `/assets`, `/prices`, `/changes`.
-- **Frontend (React / Vite)** : consomme cette API et affiche un dashboard interactif
-  avec graphique, filtres et indicateurs simples.
-  
-#### 1.1 Côté backend 
-Pour le Sprint 2, l’API expose les endpoints suivants :
-- `GET /assets`  
-  Retourne la liste des cryptomonnaies suivies
-- `GET /prices?symbol=<symbol>&limit=<n>`  
-  Retourne l’historique des prix pour un actif donné, limité à *n* points récents.
-
-- `GET /changes`  
-  Retourne pour chaque actif le dernier prix connu et la variation sur 24h
-  (utilisé pour les badges ).
-
-L’API est protégée par CORS en mode développement (`cors({ origin: true })`), ce qui
-permet au frontend React (port Vite) de communiquer avec l’API (port backend).
-#### 1.2. Côté frontend : structure des composants
-
-Le frontend est une application **React + Vite**. Le point d’entrée est `main.tsx`, qui
-monte le composant racine `App`. 
-
-Les éléments principaux sont :
-
-- **`App.tsx`**  
-  Composant principal qui :
-  - gère les états de la page : actif sélectionné (`symbol`), actif de comparaison (`compare`),
-    période (`limit`), options d’indicateurs (`showSMA`, `showEMA`), et mode
-    normalisé ou non (`normalize`).
-  - appelle le hook personalisé `useMarketData` pour récupérer les données depuis l’API.
-  - construit les données prêtes pour le graphique (`chartData`),
-  - calcule le dernier prix, la date de mise à jour et les variations en pourcentage,
-  - orchestre l’affichage des sous-composants `Controls`, `PriceBadges` et `CryptoChart`. 
-
-- **`useMarketData.ts` (hook personnalisé)**  
-  Ce hook encapsule toute la logique d’accès aux données :
-  - charge la liste des actifs via `fetchAssets()` (`GET /assets`),
-  - charge les prix d’un actif via `fetchPrices(symbol, limit)` (`GET /prices`),
-  - gère un état `loading` et `err` pour l’UX.
-  - met en place un **auto-refresh** 60s .
-    avec nettoyage du timer à chaque changement de `symbol`, `compare` ou `limit`.   
-
-  Il retourne : `{ assets, dataPrimary, dataCompare, loading, err }`.
-
-- **`lib/api.ts`**  
-  Couche d’accès HTTP au backend :
-  - `fetchAssets()` → `GET /assets`,
-  - `fetchPrices(symbol, limit)` → `GET /prices`,
-  - `fetchChanges()` → `GET /changes`.  
-  L’URL de base de l’API est configurée via la variable d’environnement `VITE_API_URL`.   
-
-- **`Controls.tsx`**  
-  Composant d’interface qui affiche :
-  - un sélecteur de crypto principale,
-  - un sélecteur d’actif de comparaison,
-  - un sélecteur de période (20 / 50 / 100 / 200 points),
-  - des options d’affichage (variation %, SMA, EMA).  
-  Il ne fait aucun appel API : il remonte simplement les changements grâce à un callback
-  `onChange` et laisse `App` mettre à jour les états. 
-
-- **`PriceBadges.tsx`**  
-  Affiche la synthèse des informations :
-  - dernier prix de la crypto sélectionnée,
-  - date/heure de la dernière mise à jour,
-  - variations en pourcentage pour l’actif principal et, si présent, pour
-    l’actif de comparaison (badges colorés vert/rouge). 
-
-- **`CryptoChart.tsx`**  
-  Utilise la librairie de graphiques (Recharts) pour tracer :
-  - la courbe de l’actif principal,
-  - éventuellement la courbe de comparaison,
-  - les indicateurs SMA/EMA si activés.  
-  Il s’appuie sur des fonctions utilitaires (`minmax`, `paddedDomain`) pour calculer le
-  domaine des axes Y et rendre un graph lisible, avec auto-ajustement du zoom. 
-
-- **Utilitaires (`series.ts`, `percent.ts`, `domains.ts`)**  
-  - `buildChartData(...)` assemble les séries (principal + comparaison + SMA/EMA) en un
-    tableau unique prêt pour le graphique.
-  - `normalizeSeries`, `pctChange`, `pctFromNormalized` gèrent les calculs de pourcentage
-    et la représentation en base 100 pour les comparaisons relatives.
-  - `minmax` et `paddedDomain` calculent les bornes min/max pour les axes.   
-#### 1.3. Flux de données du backend au graphique
-
-Le flux de données pour afficher un graphique dans le Sprint 2 est le suivant :
-
-1. L’utilisateur choisit un actif et une période via le composant `Controls`.
-2. `App` met à jour ses états (`symbol`, `compare`, `limit`) et appelle
-   automatiquement le hook `useMarketData`.
-3. `useMarketData` :
-   - interroge le backend via `fetchPrices(symbol, limit)` (et éventuellement
-     `fetchPrices(compare, limit)`),
-   - met à jour `dataPrimary` et `dataCompare`,
-   - indique l’état du chargement (`loading`) et les erreurs (`err`).
-4. `App` construit `chartData` à partir de ces séries (et des options SMA/EMA/normalize)
-   et calcule aussi le dernier prix et les variations.
-5. `CryptoChart` affiche `chartData` sous forme de courbes, avec un axe Y adapté
-   à chaque série.
-6. `PriceBadges` affiche le dernier prix et les variations pour donner un résumé rapide.
-
-#### 2.une capture de Frontend (dashboard sprint 2)
-![dashboardsprint2](./images/dashboardsprint2.png)
+> Application de suivi de portefeuille crypto avec alertes et prévisions
 
 ---
 
-# Sprint 3 : Graphique en Chandeliers (OHLC)
+## Table des matières
 
-Le Sprint 3 ajoute un mode de visualisation alternatif : le graphique en **chandeliers japonais** (candlestick / OHLC), couramment utilisé en analyse technique pour visualiser l'évolution des prix.
+1. [Vue d'ensemble](#1-vue-densemble)
+2. [Architecture](#2-architecture)
+3. [Backend](#3-backend)
+4. [Frontend](#4-frontend)
+5. [Base de données](#5-base-de-données)
+6. [API Reference](#6-api-reference)
+7. [Services](#7-services)
+8. [Authentification & Sécurité](#8-authentification--sécurité)
+9. [Tests](#9-tests)
+10. [Déploiement](#10-déploiement)
+11. [Configuration](#11-configuration)
 
-## 1. Objectifs du Sprint 3
+---
 
-- Ajouter un endpoint backend pour agréger les prix en bougies OHLC (Open, High, Low, Close).
-- Créer un composant frontend `CandlestickChart` pour afficher les chandeliers.
-- Permettre à l'utilisateur de basculer entre le mode **Courbe** et le mode **Chandeliers**.
+## 1. Vue d'ensemble
 
-## 2. Backend : Endpoint OHLC
+### 1.1 Description du projet
 
-### 2.1 Nouveau endpoint
+CryptoTracker est une application full-stack de suivi de crypto-monnaies comprenant :
+
+- **Backend** : API REST Node.js/Express/TypeScript avec PostgreSQL
+- **Frontend** : Application React/TypeScript avec Vite
+- **Collecte** : Intégration CoinGecko API avec scheduler automatique
+- **Notifications** : Système d'alertes avec webhooks Discord
+
+### 1.2 Stack technique
+
+| Composant | Technologies |
+|-----------|--------------|
+| Backend | Node.js 20+, Express 5, TypeScript 5.6 |
+| ORM | Prisma 6.x |
+| Base de données | PostgreSQL 15+ |
+| Frontend | React 19, Vite 6, TypeScript |
+| Graphiques | Recharts, SVG natif |
+| Auth | JWT, bcryptjs |
+| Tests | Vitest, Supertest |
+| Containerisation | Docker, Docker Compose |
+| Orchestration | Kubernetes (K8s) |
+
+### 1.3 Structure du projet
 
 ```
-GET /prices/ohlc?symbol=<symbol>&granularity=<granularity>
+gla/
+├── backend/                 # API Node.js
+│   ├── src/
+│   │   ├── api/            # Serveur Express
+│   │   ├── config/         # Configuration
+│   │   ├── jobs/           # Scheduler (cron)
+│   │   ├── middlewares/    # Auth middleware
+│   │   ├── providers/      # CoinGecko API
+│   │   ├── repos/          # Prisma client
+│   │   ├── routes/         # Routes Express
+│   │   ├── services/       # Business logic
+│   │   └── tests/          # Tests unitaires
+│   ├── prisma/             # Schéma & migrations
+│   └── k8s/                # Manifestes Kubernetes
+├── frontend/               # Application React
+│   ├── src/
+│   │   ├── components/     # Composants UI
+│   │   ├── contexts/       # React contexts
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── lib/            # API client
+│   │   └── utils/          # Fonctions utilitaires
+└── docs/                   # Documentation
 ```
 
-**Paramètres :**
-- `symbol` : identifiant de la crypto (ex: `bitcoin`)
-- `granularity` : période d'agrégation (`1h`, `6h`, `24h`)
+---
 
-**Réponse :**
-```json
-{
-  "symbol": "bitcoin",
-  "granularity": "1h",
-  "data": [
-    { "t": "2025-11-30T10:00:00Z", "open": 91000, "high": 91500, "low": 90800, "close": 91200 },
-    ...
-  ]
+## 2. Architecture
+
+### 2.1 Architecture globale
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│   Frontend      │────▶│   Backend API   │────▶│   PostgreSQL    │
+│   (React)       │     │   (Express)     │     │   (Prisma)      │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                               │
+                               │ Scheduler
+                               ▼
+                        ┌─────────────────┐
+                        │                 │
+                        │   CoinGecko     │
+                        │   API           │
+                        │                 │
+                        └─────────────────┘
+```
+
+### 2.2 Architecture Backend (Layered)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Routes Layer                          │
+│  (auth.routes, admin.routes, alert.routes, portfolio.routes) │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Services Layer                          │
+│   (AuthService, AdminService, AlertService, ForecastService) │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Repository Layer                          │
+│                   (Prisma Client)                            │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      PostgreSQL                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 Flux de données
+
+#### Collecte automatique
+1. **Scheduler** (node-cron) déclenche la collecte toutes les 5 minutes
+2. **CollectService** appelle le provider CoinGecko
+3. **CoinGeckoProvider** récupère les données des markets
+4. **CollectService** persiste les `MarketSnapshot` via Prisma
+5. **AlertService.evaluateAll()** vérifie les alertes actives
+6. **NotifierService** envoie les notifications Discord si déclenchées
+
+#### Requête utilisateur
+1. **Frontend** envoie requête HTTP avec JWT
+2. **Middleware auth** vérifie le token
+3. **Route** valide les paramètres et appelle le service
+4. **Service** exécute la logique métier
+5. **Prisma** interroge PostgreSQL
+6. **Réponse JSON** retournée au frontend
+
+---
+
+## 3. Backend
+
+### 3.1 Point d'entrée
+
+```typescript
+// src/index.ts
+import "dotenv/config";
+import { app } from "./api/server.js";
+import { initScheduler } from "./jobs/scheduler.js";
+import { prisma } from "./repos/prisma.js";
+
+const PORT = Number(process.env.PORT) || 4000;
+
+async function main() {
+  await prisma.$connect();
+  initScheduler();
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+main();
+```
+
+### 3.2 Configuration serveur Express
+
+```typescript
+// src/api/server.ts
+import express from "express";
+import cors from "cors";
+import morgan from "morgan";
+
+// Import des routes
+import healthRoutes from "../routes/health.routes.js";
+import authRoutes from "../routes/auth.routes.js";
+import adminRoutes from "../routes/admin.routes.js";
+import assetRoutes from "../routes/asset.routes.js";
+import priceRoutes from "../routes/price.routes.js";
+import alertRoutes from "../routes/alert.routes.js";
+import portfolioRoutes from "../routes/portfolio.routes.js";
+import forecastRoutes from "../routes/forecast.routes.js";
+
+export const app = express();
+
+// Middlewares globaux
+app.use(cors());
+app.use(express.json());
+app.use(morgan("dev"));
+
+// Montage des routes
+app.use("/health", healthRoutes);
+app.use("/auth", authRoutes);
+app.use("/admin", adminRoutes);
+app.use("/assets", assetRoutes);
+app.use("/prices", priceRoutes);
+app.use("/alerts", alertRoutes);
+app.use("/portfolios", portfolioRoutes);
+app.use("/forecast", forecastRoutes);
+```
+
+### 3.3 Structure des routes
+
+Chaque module de route suit le pattern :
+
+```typescript
+// src/routes/<module>.routes.ts
+import { Router } from "express";
+import { authenticate, authorize } from "../middlewares/auth.js";
+import { SomeService } from "../services/SomeService.js";
+
+const router = Router();
+
+// Middleware d'authentification si nécessaire
+router.use(authenticate);
+
+// GET /endpoint
+router.get("/", async (req, res) => {
+  try {
+    const data = await SomeService.getData();
+    res.json({ data });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+export default router;
+```
+
+---
+
+## 4. Frontend
+
+### 4.1 Structure des composants
+
+```
+src/
+├── App.tsx              # Composant principal + navigation par onglets
+├── main.tsx             # Point d'entrée React
+├── components/
+│   ├── Controls.tsx     # Sélecteurs (crypto, période, options)
+│   ├── CryptoChart.tsx  # Graphique en ligne (Recharts)
+│   ├── CandlestickChart.tsx  # Graphique en chandeliers
+│   ├── PriceBadges.tsx  # Affichage prix et variations
+│   ├── AlertsPanel.tsx  # Gestion des alertes
+│   ├── ForecastChart.tsx # Graphique de prévisions
+│   ├── PortfolioPanel.tsx # Gestion portfolio
+│   ├── AdminDashboard.tsx # Panel admin
+│   └── LoginPage.tsx    # Page de connexion
+├── contexts/
+│   └── AuthContext.tsx  # Context d'authentification
+├── hooks/
+│   └── useMarketData.ts # Hook de récupération des données
+├── lib/
+│   └── api.ts          # Client HTTP (fetch)
+└── utils/
+    ├── series.ts       # Construction des séries de données
+    ├── percent.ts      # Calculs de pourcentages
+    └── domains.ts      # Calculs des domaines Y
+```
+
+### 4.2 Context d'authentification
+
+```typescript
+// src/contexts/AuthContext.tsx
+export interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
+  logout: () => void;
 }
 ```
 
-### 2.2 Logique d'agrégation
-
-L'endpoint récupère les `MarketSnapshot` de l'actif et les regroupe par intervalle de temps (bucket) :
-
-1. Calcul du `bucketStart` : `Math.floor(timestamp / bucketMs) * bucketMs`
-2. Pour chaque bucket :
-   - `open` = premier prix du bucket
-   - `high` = prix maximum
-   - `low` = prix minimum
-   - `close` = dernier prix du bucket
-
-## 3. Frontend : Composant CandlestickChart
-
-### 3.1 Structure du composant
-
-Le composant `CandlestickChart.tsx` utilise **SVG natif** pour dessiner les chandeliers :
-
-- **Wick (mèche)** : ligne verticale du `high` au `low`
-- **Body (corps)** : rectangle entre `open` et `close`
-- **Couleur** : vert si `close >= open` (haussier), rouge sinon (baissier)
-
-### 3.2 Fonctionnalités
-
-- Redimensionnement automatique via `ResizeObserver`
-- Affichage des volumes en barres sous les chandeliers
-- Tooltip au survol avec les valeurs OHLC
-- Grille de fond pour faciliter la lecture
-
-### 3.3 Intégration dans Controls
-
-Le composant `Controls.tsx` est enrichi avec un sélecteur de mode :
-- **Courbe** : graphique linéaire classique (Recharts)
-- **Chandeliers (OHLC)** : graphique en bougies japonaises
-
-## 4. Types de données
+### 4.3 Hook useMarketData
 
 ```typescript
-export type OhlcPoint = {
-  t: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume?: number | null;
-};
+// src/hooks/useMarketData.ts
+export function useMarketData(symbol: string, compare: string, limit: number) {
+  // Charge les assets, prix principal, prix comparaison
+  // Auto-refresh toutes les 60 secondes
+  return { assets, dataPrimary, dataCompare, loading, err };
+}
 ```
 
-## 5. Flux de données
+### 4.4 Client API
 
-1. L'utilisateur sélectionne le mode **Chandeliers** dans `Controls`
-2. `App.tsx` détecte `chartMode === "ohlc"` et appelle `fetchOhlc(symbol, granularity)`
-3. Le backend agrège les snapshots en bougies OHLC
-4. `CandlestickChart` affiche les données en SVG
+```typescript
+// src/lib/api.ts
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
+// Fonctions d'appel API
+fetchAssets(): Promise<Asset[]>
+fetchPrices(symbol, limit): Promise<Price[]>
+fetchOhlc(symbol, granularity): Promise<OhlcPoint[]>
+fetchForecast(symbol, method, history, steps): Promise<Forecast>
+fetchAlerts(): Promise<Alert[]>
+fetchPortfolios(): Promise<Portfolio[]>
+// ... etc
+```
 
 ---
 
-# Sprint 4 : Alertes, Prévisions & Portfolio
+## 5. Base de données
 
-Le Sprint 4 ajoute trois fonctionnalités avancées pour transformer le dashboard en outil de trading complet :
+### 5.1 Schéma Prisma
 
-1. **Système d'alertes** : notifications quand un prix dépasse un seuil
-2. **Prévisions** : prédictions de prix basées sur des algorithmes (SMA, EMA, régression linéaire)
-3. **Gestion de portfolio** : suivi des positions et calcul des gains/pertes (PnL)
+```prisma
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-## 1. Architecture étendue
+generator client {
+  provider = "prisma-client-js"
+}
 
-### 1.1 Nouveaux modèles Prisma
+enum Role {
+  USER
+  ADMIN
+}
+```
 
+### 5.2 Modèles de données
+
+#### User (Utilisateurs)
+```prisma
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  portfolios Portfolio[]
+  alerts     Alert[]
+}
+```
+
+#### Asset (Crypto-monnaies)
+```prisma
+model Asset {
+  id         Int              @id @default(autoincrement())
+  providerId String           @unique   // ex: "bitcoin"
+  source     String                      // ex: "coingecko"
+  symbol     String                      // ex: "btc"
+  name       String                      // ex: "Bitcoin"
+  createdAt  DateTime         @default(now())
+  
+  snapshots  MarketSnapshot[]
+  alerts     Alert[]
+  positions  Position[]
+  trades     Trade[]
+}
+```
+
+#### MarketSnapshot (Prix historiques)
+```prisma
+model MarketSnapshot {
+  id           Int       @id @default(autoincrement())
+  assetId      Int
+  ingestedAt   DateTime  @default(now())
+  providerTs   DateTime?
+  priceUsd     Float
+  volume24hUsd Float?
+  marketCapUsd Float?
+  change24hPct Float?
+
+  asset Asset @relation(fields: [assetId], references: [id])
+  @@index([assetId, ingestedAt(sort: Desc)])
+}
+```
+
+#### Alert (Alertes)
 ```prisma
 model Alert {
   id            Int               @id @default(autoincrement())
   assetId       Int
+  userId        Int?
   type          String            // price_above, price_below, change_above, change_below
   threshold     Float
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
   lastTriggered DateTime?
+  
   notifications NotificationLog[]
-
-  asset Asset @relation(fields: [assetId], references: [id])
-  @@index([assetId, isActive])
+  asset         Asset  @relation(...)
+  user          User?  @relation(...)
 }
+```
 
-model NotificationLog {
-  id        Int      @id @default(autoincrement())
-  alertId   Int
-  sentAt    DateTime @default(now())
-  channel   String   // discord, email, webhook
-  payload   Json?
-  success   Boolean
-  errorMsg  String?
-
-  alert Alert @relation(fields: [alertId], references: [id])
-  @@index([alertId, sentAt(sort: Desc)])
-}
-
+#### Portfolio, Position, Trade
+```prisma
 model Portfolio {
   id        Int        @id @default(autoincrement())
+  userId    Int?
   name      String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
   positions Position[]
   trades    Trade[]
 }
 
 model Position {
-  id          Int      @id @default(autoincrement())
+  id          Int   @id @default(autoincrement())
   portfolioId Int
   assetId     Int
   quantity    Float
   avgCost     Float
-  updatedAt   DateTime @updatedAt
-
-  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
-  asset     Asset     @relation(fields: [assetId], references: [id])
-
   @@unique([portfolioId, assetId])
-  @@index([portfolioId])
 }
 
 model Trade {
   id          Int      @id @default(autoincrement())
   portfolioId Int
   assetId     Int
-  side        String   // buy, sell
+  side        String   // "buy" | "sell"
   quantity    Float
   priceUsd    Float
   totalUsd    Float
   executedAt  DateTime @default(now())
-  notes       String?
-
-  portfolio Portfolio @relation(fields: [portfolioId], references: [id])
-  asset     Asset     @relation(fields: [assetId], references: [id])
-
-  @@index([portfolioId, executedAt(sort: Desc)])
-  @@index([assetId])
 }
 ```
 
-### 1.2 Nouveaux services backend
-
-| Service | Fichier | Responsabilité |
-|---------|---------|----------------|
-| AlertService | `AlertService.ts` | Évaluation des alertes, déclenchement des notifications |
-| ForecastService | `ForecastService.ts` | Calcul des prévisions (SMA, EMA, régression) |
-| PortfolioService | `PortfolioService.ts` | Gestion des trades, positions, calcul PnL |
-| NotifierService | `NotifierService.ts` | Envoi des notifications (Discord webhook) |
-
-## 2. Système d'Alertes
-
-### 2.1 Types d'alertes
-
-| Type | Description |
-|------|-------------|
-| `price_above` | Prix dépasse un seuil |
-| `price_below` | Prix descend sous un seuil |
-| `change_above` | Variation 24h dépasse un pourcentage |
-| `change_below` | Variation 24h descend sous un pourcentage |
-
-### 2.2 Endpoints API
+### 5.3 Diagramme ERD
 
 ```
-GET    /alerts              → Liste toutes les alertes
-POST   /alerts              → Créer une alerte { assetId, type, threshold }
-PUT    /alerts/:id/activate → Activer une alerte
-PUT    /alerts/:id/deactivate → Désactiver une alerte
-DELETE /alerts/:id          → Supprimer une alerte
+┌────────────────┐       ┌────────────────┐       ┌────────────────┐
+│     User       │       │     Asset      │       │ MarketSnapshot │
+├────────────────┤       ├────────────────┤       ├────────────────┤
+│ id (PK)        │       │ id (PK)        │◀──────│ assetId (FK)   │
+│ email          │       │ providerId     │       │ priceUsd       │
+│ password       │       │ symbol         │       │ volume24hUsd   │
+│ role           │       │ name           │       │ change24hPct   │
+│ name           │       │ source         │       │ ingestedAt     │
+└────────────────┘       └────────────────┘       └────────────────┘
+        │                        │
+        │                        │
+        ▼                        ▼
+┌────────────────┐       ┌────────────────┐
+│   Portfolio    │       │     Alert      │
+├────────────────┤       ├────────────────┤
+│ id (PK)        │       │ id (PK)        │
+│ userId (FK)    │       │ assetId (FK)   │
+│ name           │       │ userId (FK)    │
+└────────────────┘       │ type           │
+        │                │ threshold      │
+        │                │ isActive       │
+        ▼                └────────────────┘
+┌────────────────┐
+│   Position     │       ┌────────────────┐
+├────────────────┤       │     Trade      │
+│ portfolioId    │       ├────────────────┤
+│ assetId (FK)   │       │ portfolioId    │
+│ quantity       │       │ assetId (FK)   │
+│ avgCost        │       │ side           │
+└────────────────┘       │ quantity       │
+                         │ priceUsd       │
+                         └────────────────┘
 ```
 
-### 2.3 Évaluation automatique
+---
 
-Le service `AlertService.evaluateAll()` est appelé par le scheduler après chaque collecte :
+## 6. API Reference
 
-1. Récupère toutes les alertes actives
-2. Pour chaque alerte, compare le prix/variation actuel au seuil
-3. Si condition remplie :
-   - Met à jour `lastTriggered`
-   - Envoie une notification via `NotifierService`
-   - Crée un `NotificationLog`
+### 6.1 Authentification
 
-### 2.4 Notifications Discord
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| POST | `/auth/register` | Inscription | ❌ |
+| POST | `/auth/login` | Connexion | ❌ |
+| GET | `/auth/me` | Profil utilisateur | ✅ |
+| PATCH | `/auth/password` | Modifier mot de passe | ✅ |
 
-Le `NotifierService` envoie des webhooks Discord avec un message formaté :
-
-```
-🚨 Alerte déclenchée !
-Bitcoin a dépassé 90000 USD
-Prix actuel : 91,364 USD
-```
-
-## 3. Prévisions de Prix
-
-### 3.1 Méthodes disponibles
-
-| Méthode | Description |
-|---------|-------------|
-| `sma` | Simple Moving Average - moyenne mobile simple |
-| `ema` | Exponential Moving Average - moyenne mobile exponentielle |
-| `linear` | Régression linéaire - extrapolation de la tendance |
-
-### 3.2 Endpoint API
-
-```
-GET /forecast?symbol=<symbol>&method=<method>&history=<n>&steps=<n>
-```
-
-**Paramètres :**
-- `symbol` : crypto à analyser
-- `method` : `sma`, `ema`, ou `linear`
-- `history` : nombre de points historiques (défaut: 50)
-- `steps` : nombre de points à prédire (défaut: 10)
-
-**Réponse :**
+#### POST /auth/register
 ```json
+// Request
+{ "email": "user@example.com", "password": "secret123", "name": "John" }
+
+// Response 201
+{ "data": { "user": { "id": 1, "email": "...", "role": "USER" }, "token": "eyJ..." } }
+```
+
+#### POST /auth/login
+```json
+// Request
+{ "email": "user@example.com", "password": "secret123" }
+
+// Response 200
+{ "data": { "user": { "id": 1, "email": "..." }, "token": "eyJ..." } }
+```
+
+### 6.2 Assets
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/assets` | Liste des actifs | ❌ |
+| GET | `/assets/:symbol` | Détails d'un actif | ❌ |
+
+### 6.3 Prix
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/prices` | Prix historiques | ❌ |
+| GET | `/prices/ohlc` | Données OHLC | ❌ |
+| GET | `/prices/changes` | Variations 24h | ❌ |
+
+#### GET /prices
+```
+GET /prices?symbol=bitcoin&limit=50
+
+Response:
+{ "data": [{ "t": "2025-01-01T00:00:00Z", "priceUsd": 95000, ... }] }
+```
+
+#### GET /prices/ohlc
+```
+GET /prices/ohlc?symbol=bitcoin&granularity=1h
+
+Response:
+{ "symbol": "bitcoin", "granularity": "1h", "data": [
+  { "t": "...", "open": 95000, "high": 95500, "low": 94800, "close": 95200 }
+]}
+```
+
+### 6.4 Alertes
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/alerts` | Liste des alertes | ✅ |
+| GET | `/alerts/:id` | Détails d'une alerte | ✅ |
+| POST | `/alerts` | Créer une alerte | ✅ |
+| PATCH | `/alerts/:id/activate` | Activer | ✅ |
+| PATCH | `/alerts/:id/deactivate` | Désactiver | ✅ |
+| DELETE | `/alerts/:id` | Supprimer | ✅ |
+
+#### POST /alerts
+```json
+// Request
+{ "assetId": 1, "type": "price_above", "threshold": 100000 }
+
+// Response 201
+{ "data": { "id": 1, "assetId": 1, "type": "price_above", "threshold": 100000, "isActive": true } }
+```
+
+### 6.5 Portfolios
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/portfolios` | Liste des portfolios | ✅ |
+| GET | `/portfolios/:id` | Détails portfolio | ✅ |
+| POST | `/portfolios` | Créer portfolio | ✅ |
+| DELETE | `/portfolios/:id` | Supprimer portfolio | ✅ |
+| GET | `/portfolios/:id/positions` | Positions | ✅ |
+| GET | `/portfolios/:id/pnl` | Calcul PnL | ✅ |
+| GET | `/portfolios/:id/trades` | Historique trades | ✅ |
+| POST | `/portfolios/:id/trades` | Exécuter trade | ✅ |
+
+#### POST /portfolios/:id/trades
+```json
+// Request
+{ "assetId": 1, "side": "buy", "quantity": 0.5, "priceUsd": 95000, "notes": "Achat BTC" }
+
+// Response 201
+{ "data": { "id": 1, "side": "buy", "quantity": 0.5, "totalUsd": 47500 } }
+```
+
+### 6.6 Prévisions
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/forecast` | Générer prévision | ❌ |
+
+#### GET /forecast
+```
+GET /forecast?symbol=bitcoin&method=ema&history=50&steps=10
+
+Response:
 {
   "data": {
     "symbol": "bitcoin",
     "method": "ema",
-    "historical": [{ "t": "...", "price": 91000 }, ...],
-    "predicted": [{ "t": "...", "price": 91500 }, ...],
+    "historical": [{ "t": "...", "price": 95000 }],
+    "predicted": [{ "t": "...", "price": 96000 }],
     "metrics": {
-      "lastPrice": 91364,
-      "predictedPrice": 92100,
-      "predictedChange": 736,
-      "predictedChangePct": 0.81
+      "lastPrice": 95000,
+      "predictedPrice": 96000,
+      "predictedChange": 1000,
+      "predictedChangePct": 1.05
     }
   }
 }
 ```
 
-### 3.3 Algorithmes
+### 6.7 Administration
 
-**SMA (Simple Moving Average) :**
-```
-SMA = (P1 + P2 + ... + Pn) / n
-```
-Projection : dernière valeur SMA répétée.
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/admin/stats` | Statistiques globales | 🔒 ADMIN |
+| GET | `/admin/users` | Liste utilisateurs | 🔒 ADMIN |
+| GET | `/admin/users/:id` | Détails utilisateur | 🔒 ADMIN |
+| POST | `/admin/users` | Créer utilisateur | 🔒 ADMIN |
+| PATCH | `/admin/users/:id` | Modifier utilisateur | 🔒 ADMIN |
+| DELETE | `/admin/users/:id` | Supprimer utilisateur | 🔒 ADMIN |
 
-**EMA (Exponential Moving Average) :**
-```
-EMA_t = α × P_t + (1 - α) × EMA_{t-1}
-α = 2 / (n + 1)
-```
-Projection : extrapolation de la tendance EMA.
+### 6.8 Santé
 
-**Régression Linéaire :**
-```
-y = mx + b
-m = Σ((x - x̄)(y - ȳ)) / Σ(x - x̄)²
-b = ȳ - m × x̄
-```
-Projection : extension de la droite de régression.
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/health` | Status de l'API |
+| GET | `/health/db` | Status base de données |
 
-## 4. Gestion de Portfolio
+---
 
-### 4.1 Concepts
+## 7. Services
 
-- **Portfolio** : conteneur de positions (ex: "Mon Portfolio Crypto")
-- **Position** : détention d'un actif (quantité + coût moyen)
-- **Trade** : transaction d'achat ou de vente
-- **PnL** : Profit and Loss (gains/pertes)
+### 7.1 AuthService
 
-### 4.2 Endpoints API
-
-```
-GET    /portfolios                    → Liste des portfolios
-POST   /portfolios                    → Créer un portfolio { name }
-DELETE /portfolios/:id                → Supprimer un portfolio
-
-GET    /portfolios/:id/positions      → Positions du portfolio
-GET    /portfolios/:id/pnl            → Calcul PnL en temps réel
-GET    /portfolios/:id/trades         → Historique des trades
-POST   /portfolios/:id/trades         → Exécuter un trade
-```
-
-### 4.3 Calcul du PnL
-
-Pour chaque position :
-
-```
-currentValue = quantity × currentPrice
-totalCost = quantity × avgCost
-unrealizedPnl = currentValue - totalCost
-unrealizedPnlPct = (unrealizedPnl / totalCost) × 100
-```
-
-**Exemple :**
-- Achat : 0.5 BTC à 80,000 USD → coût = 40,000 USD
-- Prix actuel : 91,364 USD → valeur = 45,682 USD
-- PnL : +5,682 USD (+14.2%)
-
-### 4.4 Gestion des trades
-
-Lors d'un **achat** :
-1. Si position existante : mise à jour du coût moyen pondéré
-2. Sinon : création d'une nouvelle position
-
-Lors d'une **vente** :
-1. Vérification du solde disponible
-2. Réduction de la quantité
-3. Si quantité = 0 : suppression de la position
-
-## 5. Frontend : Nouveaux composants
-
-### 5.1 Navigation par onglets
-
-L'application utilise maintenant un système d'onglets :
-
-| Onglet | Composant | Description |
-|--------|-----------|-------------|
-| Dashboard | `App.tsx` | Graphiques et contrôles |
-| Forecast | `ForecastChart.tsx` | Prévisions de prix |
-| Alerts | `AlertsPanel.tsx` | Gestion des alertes |
-| Portfolio | `PortfolioPanel.tsx` | Gestion du portfolio |
-
-### 5.2 AlertsPanel
-
-Fonctionnalités :
-- Liste des alertes avec statut (actif/inactif)
-- Formulaire de création d'alerte
-- Boutons activer/désactiver/supprimer
-- Affichage de la dernière date de déclenchement
-
-### 5.3 ForecastChart
-
-Fonctionnalités :
-- Sélection de la méthode de prévision
-- Graphique avec zone historique et zone prédictive
-- Affichage des métriques (prix prédit, variation)
-
-### 5.4 PortfolioPanel
-
-Fonctionnalités :
-- Liste des portfolios
-- Tableau des positions avec PnL en temps réel
-- Formulaire d'exécution de trade (achat/vente)
-- Historique des transactions
-
-## 6. Types TypeScript (Frontend)
+Gestion de l'authentification et des utilisateurs.
 
 ```typescript
-// Alertes
-export type AlertType = "price_above" | "price_below" | "change_above" | "change_below";
-export type Alert = {
-  id: number;
-  assetId: number;
-  type: AlertType;
-  threshold: number;
-  isActive: boolean;
-  lastTriggered: string | null;
-  createdAt: string;
-  asset?: Asset;
-};
+// src/services/AuthService.ts
+export class AuthService {
+  static async register(email: string, password: string, name?: string)
+  static async login(email: string, password: string)
+  static async getUserById(id: number)
+  static async updatePassword(userId: number, current: string, newPass: string)
+}
+```
 
-// Prévisions
+### 7.2 AlertService
+
+Gestion des alertes et évaluation automatique.
+
+```typescript
+// src/services/AlertService.ts
+export async function createAlert(userId: number, assetId: number, type: AlertType, threshold: number)
+export async function getUserAlerts(userId: number, options?: { assetId?: number; activeOnly?: boolean })
+export async function activateAlert(id: number)
+export async function deactivateAlert(id: number)
+export async function deleteAlert(id: number)
+export async function evaluateAll()  // Appelé par le scheduler
+```
+
+**Types d'alertes supportés :**
+- `price_above` : Prix > seuil
+- `price_below` : Prix < seuil
+- `change_above` : Variation 24h > seuil %
+- `change_below` : Variation 24h < seuil %
+
+### 7.3 PortfolioService
+
+Gestion des portfolios, positions et trades.
+
+```typescript
+// src/services/PortfolioService.ts
+export async function createPortfolio(name: string, userId?: number)
+export async function getPortfoliosByUser(userId: number)
+export async function getPortfolio(id: number)
+export async function deletePortfolio(id: number)
+export async function getPortfolioPositions(portfolioId: number)
+export async function getPortfolioPnL(portfolioId: number)
+export async function getTradeHistory(portfolioId: number, limit?: number)
+export async function executeTrade(portfolioId: number, assetId: number, side: TradeSide, quantity: number, priceUsd: number, notes?: string)
+```
+
+**Calcul du PnL :**
+```typescript
+const currentValue = position.quantity * currentPrice;
+const totalCost = position.quantity * position.avgCost;
+const unrealizedPnl = currentValue - totalCost;
+const unrealizedPnlPct = (unrealizedPnl / totalCost) * 100;
+```
+
+### 7.4 ForecastService
+
+Génération de prévisions de prix.
+
+```typescript
+// src/services/ForecastService.ts
 export type ForecastMethod = "sma" | "ema" | "linear";
-export type ForecastPoint = { t: string; price: number };
-export type Forecast = {
-  symbol: string;
-  method: ForecastMethod;
-  historical: ForecastPoint[];
-  predicted: ForecastPoint[];
-  metrics: {
-    lastPrice: number;
-    predictedPrice: number;
-    predictedChange: number;
-    predictedChangePct: number;
-  };
+
+export async function generateForecast(
+  symbol: string,
+  method: ForecastMethod,
+  history: number,
+  steps: number
+)
+```
+
+**Algorithmes :**
+
+| Méthode | Formule |
+|---------|---------|
+| SMA | `SMA = (P₁ + P₂ + ... + Pₙ) / n` |
+| EMA | `EMAₜ = α × Pₜ + (1 - α) × EMAₜ₋₁` où `α = 2/(n+1)` |
+| Linear | Régression linéaire `y = mx + b` |
+
+### 7.5 CollectService
+
+Collecte automatique des données de marché.
+
+```typescript
+// src/services/CollectService.ts
+export async function runCollect()
+// 1. Appelle CoinGeckoProvider.fetchMarkets()
+// 2. Upsert des assets
+// 3. Insert des MarketSnapshots
+// 4. Crée un CollectRun log
+// 5. Appelle AlertService.evaluateAll()
+```
+
+### 7.6 NotifierService
+
+Envoi de notifications.
+
+```typescript
+// src/services/NotifierService.ts
+export async function sendNotification(alert: Alert, currentPrice: number)
+// Envoie un webhook Discord si DISCORD_WEBHOOK_URL est configuré
+```
+
+---
+
+## 8. Authentification & Sécurité
+
+### 8.1 JWT (JSON Web Token)
+
+**Configuration :**
+```env
+JWT_SECRET=votre_secret_jwt_très_long
+JWT_EXPIRES_IN=7d
+```
+
+**Structure du token :**
+```json
+{
+  "userId": 1,
+  "email": "user@example.com",
+  "role": "USER",
+  "iat": 1234567890,
+  "exp": 1234567890
+}
+```
+
+### 8.2 Middleware d'authentification
+
+```typescript
+// src/middlewares/auth.ts
+export const authenticate = async (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Token required" });
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid token" });
+  }
 };
 
-// Portfolio
-export type Portfolio = { id: number; name: string; createdAt: string };
-export type Position = {
-  id: number;
-  portfolioId: number;
-  assetId: number;
-  quantity: number;
-  avgCost: number;
-  asset?: Asset;
-};
-export type Trade = {
-  id: number;
-  portfolioId: number;
-  assetId: number;
-  side: "buy" | "sell";
-  quantity: number;
-  priceUsd: number;
-  totalUsd: number;
-  executedAt: string;
-  notes?: string;
-};
-export type PositionPnL = {
-  id: number;
-  assetId: number;
-  symbol: string;
-  quantity: number;
-  avgCost: number;
-  currentPrice: number;
-  currentValue: number;
-  unrealizedPnl: number;
-  unrealizedPnlPct: number;
+export const authorize = (...roles: Role[]) => (req, res, next) => {
+  if (!roles.includes(req.user.role)) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  next();
 };
 ```
 
-## 7. Fonctions API (Frontend)
+### 8.3 Hashage des mots de passe
 
 ```typescript
-// Alertes
-fetchAlerts(): Promise<Alert[]>
-createAlert(assetId, type, threshold): Promise<Alert>
-activateAlert(id): Promise<Alert>
-deactivateAlert(id): Promise<Alert>
-deleteAlert(id): Promise<void>
+import bcrypt from "bcryptjs";
 
-// Prévisions
-fetchForecast(symbol, method, history, steps): Promise<Forecast>
+// Hash à l'inscription
+const hash = await bcrypt.hash(password, 12);
 
-// Portfolio
-fetchPortfolios(): Promise<Portfolio[]>
-createPortfolio(name): Promise<Portfolio>
-deletePortfolio(id): Promise<void>
-fetchPositions(portfolioId): Promise<Position[]>
-fetchPortfolioPnL(portfolioId): Promise<PortfolioPnL>
-fetchTrades(portfolioId, limit): Promise<Trade[]>
-executeTrade(portfolioId, assetId, side, quantity, priceUsd, notes): Promise<Trade>
+// Vérification à la connexion
+const valid = await bcrypt.compare(password, user.password);
+```
+
+### 8.4 Bonnes pratiques
+
+- ✅ Mots de passe hashés avec bcrypt (cost factor 12)
+- ✅ Tokens JWT avec expiration
+- ✅ Middleware d'authentification sur routes protégées
+- ✅ Middleware d'autorisation pour les routes admin
+- ✅ Validation des entrées utilisateur
+- ✅ Gestion des erreurs sans fuite d'information
+
+---
+
+## 9. Tests
+
+### 9.1 Configuration Vitest
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: "node",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+    },
+  },
+});
+```
+
+### 9.2 Structure des tests
+
+```
+src/tests/
+├── services/
+│   ├── AuthService.test.ts
+│   ├── AlertService.test.ts
+│   ├── PortfolioService.test.ts
+│   └── ForecastService.test.ts
+├── middlewares/
+│   └── auth.test.ts
+└── integration/
+    └── api.integration.test.ts
+```
+
+### 9.3 Exécution des tests
+
+```bash
+# Tous les tests
+npm test
+
+# Avec couverture
+npm run test:coverage
+
+# Mode watch
+npm run test:watch
+```
+
+### 9.4 Exemple de test
+
+```typescript
+import { describe, it, expect, vi } from "vitest";
+import { AuthService } from "../services/AuthService";
+
+describe("AuthService", () => {
+  it("should register a new user", async () => {
+    const result = await AuthService.register("test@example.com", "password123");
+    expect(result.user.email).toBe("test@example.com");
+    expect(result.token).toBeDefined();
+  });
+});
+```
+
+---
+
+## 10. Déploiement
+
+### 10.1 Docker
+
+#### Backend Dockerfile
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+RUN npx prisma generate
+EXPOSE 4000
+CMD ["node", "dist/index.js"]
+```
+
+#### Docker Compose
+```yaml
+version: "3.8"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=postgresql://user:pass@postgres:5432/crypto
+    depends_on:
+      - postgres
+      
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+      
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: crypto
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+```
+
+### 10.2 Kubernetes
+
+Les manifestes K8s sont dans `backend/k8s/` :
+
+```
+k8s/
+├── namespace.yaml
+├── configmap.yaml
+├── secrets.yaml
+├── postgres-deployment.yaml
+├── postgres-service.yaml
+├── backend-deployment.yaml
+├── backend-service.yaml
+├── frontend-deployment.yaml
+├── frontend-service.yaml
+├── ingress.yaml
+├── hpa.yaml (Horizontal Pod Autoscaler)
+└── kustomization.yaml
+```
+
+#### Déploiement
+```bash
+kubectl apply -k backend/k8s/
+```
+
+### 10.3 Migrations Prisma
+
+```bash
+# Créer une migration
+npx prisma migrate dev --name migration_name
+
+# Appliquer en production
+npx prisma migrate deploy
+
+# Générer le client
+npx prisma generate
+```
+
+---
+
+## 11. Configuration
+
+### 11.1 Variables d'environnement Backend
+
+| Variable | Description | Défaut |
+|----------|-------------|--------|
+| `PORT` | Port du serveur | `4000` |
+| `DATABASE_URL` | URL PostgreSQL | - |
+| `JWT_SECRET` | Secret JWT | - |
+| `JWT_EXPIRES_IN` | Expiration JWT | `7d` |
+| `COINGECKO_API_URL` | URL API CoinGecko | `https://api.coingecko.com/api/v3` |
+| `DISCORD_WEBHOOK_URL` | Webhook Discord | - |
+| `CRON_SCHEDULE` | Fréquence collecte | `*/5 * * * *` |
+
+### 11.2 Variables d'environnement Frontend
+
+| Variable | Description | Défaut |
+|----------|-------------|--------|
+| `VITE_API_URL` | URL du backend | `http://localhost:4000` |
+
+### 11.3 Exemple .env Backend
+
+```env
+# Server
+PORT=4000
+
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cryptotracker
+
+# JWT
+JWT_SECRET=super_secret_key_change_this_in_production
+JWT_EXPIRES_IN=7d
+
+# CoinGecko
+COINGECKO_API_URL=https://api.coingecko.com/api/v3
+
+# Notifications
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/xxx/yyy
+
+# Scheduler
+CRON_SCHEDULE=*/5 * * * *
+```
+
+### 11.4 Installation locale
+
+```bash
+# Clone du projet
+git clone <repo_url>
+cd gla
+
+# Backend
+cd backend
+npm install
+cp .env.example .env  # Configurer les variables
+npx prisma migrate dev
+npm run dev
+
+# Frontend (nouveau terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## Annexes
+
+### A. Scripts npm Backend
+
+```json
+{
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  }
+}
+```
+
+### B. Codes d'erreur HTTP
+
+| Code | Description |
+|------|-------------|
+| 200 | Succès |
+| 201 | Créé |
+| 400 | Bad Request (validation) |
+| 401 | Non authentifié |
+| 403 | Non autorisé |
+| 404 | Non trouvé |
+| 409 | Conflit (email existe déjà) |
+| 500 | Erreur serveur |
+
+### C. Format de réponse API
+
+```json
+// Succès
+{ "data": { ... } }
+
+// Succès avec message
+{ "ok": true, "message": "Action completed" }
+
+// Erreur
+{ "error": "Description de l'erreur" }
+```
+
+---
+
+*Documentation technique v2.0 - CryptoTracker*
