@@ -50,16 +50,34 @@ export default function PortfolioPanel() {
   const currentPosition = pnlData?.positions.find((p) => p.assetId === tradeAssetId);
   const availableQuantity = currentPosition?.quantity || 0;
 
+  // Helper pour obtenir le prix actuel d'un asset
+  function getCurrentPrice(assetId: number): number | undefined {
+    const asset = assets.find((a) => a.id === assetId);
+    if (asset) {
+      return assetPrices[asset.symbol.toLowerCase()];
+    }
+    return undefined;
+  }
+
   // Handler pour changement d'asset - auto-remplir le prix
   function handleAssetChange(assetId: number | "") {
     setTradeAssetId(assetId);
     if (assetId !== "") {
-      const asset = assets.find((a) => a.id === assetId);
-      if (asset) {
-        const currentPrice = assetPrices[asset.symbol.toLowerCase()];
-        if (currentPrice !== undefined) {
-          setTradePrice(currentPrice.toString());
-        }
+      const currentPrice = getCurrentPrice(Number(assetId));
+      if (currentPrice !== undefined) {
+        setTradePrice(currentPrice.toString());
+      }
+    }
+  }
+
+  // Handler pour changement de type (buy/sell) - toujours utiliser le prix actuel du marché
+  function handleSideChange(side: "buy" | "sell") {
+    setTradeSide(side);
+    // Toujours mettre à jour avec le prix actuel du marché
+    if (tradeAssetId !== "") {
+      const currentPrice = getCurrentPrice(Number(tradeAssetId));
+      if (currentPrice !== undefined) {
+        setTradePrice(currentPrice.toString());
       }
     }
   }
@@ -205,7 +223,6 @@ export default function PortfolioPanel() {
     <div className="panel portfolio-panel">
       <div className="panel-header">
         <h2 className="panel-title">
-          <span className="panel-icon">💼</span>
           Portfolio
         </h2>
       </div>
@@ -236,7 +253,7 @@ export default function PortfolioPanel() {
                   onClick={() => handleDeletePortfolio(selectedPortfolioId)}
                   title="Supprimer le portfolio"
                 >
-                  🗑️
+                  Supprimer
                 </button>
               )}
             </div>
@@ -267,20 +284,20 @@ export default function PortfolioPanel() {
           {/* Résumé du Portfolio */}
           <div className="portfolio-summary">
             <div className="summary-card highlight">
-              <span className="summary-label">🏦 Solde Disponible</span>
+              <span className="summary-label">Solde Disponible</span>
               <span className="summary-value">{formatCurrency(soldeDisponible)}</span>
             </div>
             <div className="summary-card">
-              <span className="summary-label">💰 Total Investi</span>
+              <span className="summary-label">Total Investi</span>
               <span className="summary-value">{formatCurrency(pnlData.totals.totalCost)}</span>
             </div>
             <div className="summary-card">
-              <span className="summary-label">📈 Valeur Actuelle</span>
+              <span className="summary-label">Valeur Actuelle</span>
               <span className="summary-value">{formatCurrency(pnlData.totals.totalValue)}</span>
             </div>
             <div className="summary-card">
               <span className="summary-label">
-                {pnlData.totals.unrealizedPnl >= 0 ? "✅ Gain Potentiel" : "❌ Perte Potentielle"}
+                {pnlData.totals.unrealizedPnl >= 0 ? "Gain Potentiel" : "Perte Potentielle"}
               </span>
               <span className={`summary-value ${pnlData.totals.unrealizedPnl >= 0 ? "positive" : "negative"}`}>
                 {formatPnL(pnlData.totals.unrealizedPnl)}
@@ -289,7 +306,7 @@ export default function PortfolioPanel() {
             </div>
             <div className="summary-card">
               <span className="summary-label">
-                {pnlData.totals.realizedPnl >= 0 ? "💵 Gain Réalisé" : "💸 Perte Réalisée"}
+                {pnlData.totals.realizedPnl >= 0 ? "Gain Réalisé" : "Perte Réalisée"}
               </span>
               <span className={`summary-value ${pnlData.totals.realizedPnl >= 0 ? "positive" : "negative"}`}>
                 {formatPnL(pnlData.totals.realizedPnl)}
@@ -332,14 +349,14 @@ export default function PortfolioPanel() {
                     <button
                       type="button"
                       className={`toggle-btn ${tradeSide === "buy" ? "active buy" : ""}`}
-                      onClick={() => setTradeSide("buy")}
+                      onClick={() => handleSideChange("buy")}
                     >
                       ACHETER
                     </button>
                     <button
                       type="button"
                       className={`toggle-btn ${tradeSide === "sell" ? "active sell" : ""}`}
-                      onClick={() => setTradeSide("sell")}
+                      onClick={() => handleSideChange("sell")}
                     >
                       VENDRE
                     </button>
@@ -380,13 +397,13 @@ export default function PortfolioPanel() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Prix (USD)</label>
+                  <label className="form-label">Prix actuel (USD)</label>
                   <input
                     type="number"
-                    className="form-input"
+                    className="form-input price-readonly"
                     placeholder="0.00"
                     value={tradePrice}
-                    onChange={(e) => setTradePrice(e.target.value)}
+                    readOnly
                     step="any"
                     min="0"
                     required
@@ -427,17 +444,17 @@ export default function PortfolioPanel() {
                 </div>
               </div>
               {tradeSide === "buy" && tradeTotal > soldeDisponible && (
-                <div className="trade-warning">⚠️ Solde insuffisant !</div>
+                <div className="trade-warning">Solde insuffisant !</div>
               )}
             </form>
           )}
 
           {/* Positions */}
           <div className="section">
-            <h3 className="section-title">📊 Mes Positions</h3>
+            <h3 className="section-title">Mes Positions</h3>
             {pnlData.positions.length === 0 ? (
               <div className="empty-state">
-                <span className="empty-icon">📭</span>
+                
                 <p>Aucune position. Effectuez un trade pour commencer !</p>
               </div>
             ) : (
@@ -480,10 +497,10 @@ export default function PortfolioPanel() {
 
           {/* Historique des Trades */}
           <div className="section">
-            <h3 className="section-title">📜 Historique des Trades</h3>
+            <h3 className="section-title">Historique des Trades</h3>
             {trades.length === 0 ? (
               <div className="empty-state">
-                <span className="empty-icon">📋</span>
+                
                 <p>Aucun trade pour le moment.</p>
               </div>
             ) : (

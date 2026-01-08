@@ -40,5 +40,3 @@ spec:
                 name: backend
                 port:
                   number: 3001
-                port:
-                  number: 3001

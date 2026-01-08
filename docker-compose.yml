@@ -49,6 +49,9 @@ services:
       DATABASE_URL: postgresql://gla_user:gla_pass@db:5432/gla_db
       JWT_SECRET: ${JWT_SECRET:-supersecretjwtkey123}
       PORT: 3001
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      COINS: ${COINS:-bitcoin,ethereum,solana,cardano,ripple}
+      INTERVAL_SECONDS: ${INTERVAL_SECONDS:-300}
     depends_on:
       db:
         condition: service_healthy

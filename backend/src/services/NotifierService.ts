@@ -51,7 +51,7 @@ export async function sendDiscordNotification(message: DiscordMessage): Promise<
       };
     }
 
-    console.log(`[Discord] ✅ Notification sent successfully!`);
+    console.log(`[Discord]  Notification sent successfully!`);
     return { success: true };
   } catch (error: any) {
     const errorMsg = error?.message ?? String(error);
@@ -73,7 +73,6 @@ export async function sendAlertNotification(params: {
   const isPositive = alertType === "price_above" || alertType === "change_above";
   const color = isPositive ? 0x22c55e : 0xef4444;
 
-  // Traduction des types d'alertes en français
   const alertTypeLabels: Record<string, string> = {
     price_above: "PRIX SUPÉRIEUR À",
     price_below: "PRIX INFÉRIEUR À",
@@ -83,17 +82,17 @@ export async function sendAlertNotification(params: {
   const alertTypeDisplay = alertTypeLabels[alertType] || alertType.replace("_", " ").toUpperCase();
 
   const embed: DiscordEmbed = {
-    title: `🚨 Alerte Déclenchée: ${assetName} (${assetSymbol.toUpperCase()})`,
+    title: `Alerte Déclenchée: ${assetName} (${assetSymbol.toUpperCase()})`,
     description: `Votre alerte **${alertTypeDisplay}** a été déclenchée !`,
     color,
     fields: [
       {
-        name: "💰 Prix Actuel",
+        name: " Prix Actuel",
         value: `$${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`,
         inline: true,
       },
       {
-        name: "🎯 Seuil",
+        name: " Seuil",
         value: alertType.includes("price")
           ? `$${threshold.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`
           : `${threshold}%`,
@@ -107,7 +106,7 @@ export async function sendAlertNotification(params: {
   if (change24hPct !== null && change24hPct !== undefined) {
     const changeSign = change24hPct >= 0 ? "+" : "";
     embed.fields?.push({
-      name: "📊 Variation 24h",
+      name: " Variation 24h",
       value: `${changeSign}${change24hPct.toFixed(2)}%`,
       inline: true,
     });

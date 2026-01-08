@@ -5,18 +5,10 @@ import { runOnce } from "../services/CollectService.js";
 
 const router = Router();
 
-/**
- * GET /
- * Page d'accueil - Infos de base
- */
 router.get("/", (_req, res) => {
   res.type("text").send("Backend OK. Try /health, POST /collect, GET /assets, GET /prices");
 });
 
-/**
- * GET /health
- * Vérifie l'état du serveur et de la base de données
- */
 router.get("/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -34,10 +26,6 @@ router.get("/health", async (_req, res) => {
   }
 });
 
-/**
- * GET /metrics
- * Expose les métriques Prometheus
- */
 router.get("/metrics", async (_req, res) => {
   try {
     res.set("Content-Type", register.contentType);
@@ -47,10 +35,6 @@ router.get("/metrics", async (_req, res) => {
   }
 });
 
-/**
- * POST /collect
- * Déclenche manuellement la collecte des prix
- */
 router.post("/collect", async (_req, res) => {
   try {
     const summary = await runOnce();

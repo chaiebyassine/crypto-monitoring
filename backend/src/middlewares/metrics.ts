@@ -5,7 +5,6 @@ import {
   activeConnections,
 } from "../metrics/prometheus.js";
 
-
 export const metricsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   activeConnections.inc();
 
@@ -13,9 +12,7 @@ export const metricsMiddleware = (req: Request, res: Response, next: NextFunctio
 
   const getCleanRoute = (): string => {
     const path = req.route?.path || req.path;
-    return path
-      .replace(/\/\d+/g, "/:id")
-      .replace(/\/[a-f0-9-]{36}/gi, "/:uuid");
+    return path.replace(/\/\d+/g, "/:id").replace(/\/[a-f0-9-]{36}/gi, "/:uuid");
   };
 
   res.on("finish", () => {

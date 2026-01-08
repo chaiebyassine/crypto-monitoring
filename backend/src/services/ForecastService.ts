@@ -46,7 +46,6 @@ export async function generateForecast(
 
   if (snapshots.length < 5) return null;
 
-  // Reverse to chronological order
   const historical = snapshots.reverse().map((s) => ({
     t: s.ingestedAt,
     price: s.priceUsd,
@@ -54,7 +53,6 @@ export async function generateForecast(
 
   const prices = historical.map((h) => h.price);
 
-  // Generate predictions based on method
   let predicted: ForecastPoint[];
 
   switch (method) {
@@ -89,10 +87,6 @@ export async function generateForecast(
   };
 }
 
-/**
- * Simple Moving Average forecast
- * Projects the trend based on recent SMA
- */
 function forecastSMA(
   historical: ForecastPoint[],
   steps: number,
@@ -101,7 +95,6 @@ function forecastSMA(
   const prices = historical.map((h) => h.price);
   const lastTime = historical[historical.length - 1].t.getTime();
 
-  // Calculate average time interval
   const intervals: number[] = [];
   for (let i = 1; i < historical.length; i++) {
     intervals.push(historical[i].t.getTime() - historical[i - 1].t.getTime());
@@ -109,11 +102,9 @@ function forecastSMA(
   const avgInterval =
     intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 60000; // Default 1 minute
 
-  // Calculate SMA
   const smaValues = calculateSMA(prices, Math.min(period, prices.length));
   const lastSMA = smaValues[smaValues.length - 1];
 
-  // Calculate trend from SMA changes
   const smaTrend =
     smaValues.length >= 2
       ? (smaValues[smaValues.length - 1] - smaValues[smaValues.length - 2]) /
@@ -135,10 +126,6 @@ function forecastSMA(
   return predicted;
 }
 
-/**
- * Exponential Moving Average forecast
- * More responsive to recent price changes
- */
 function forecastEMA(
   historical: ForecastPoint[],
   steps: number,
@@ -147,7 +134,6 @@ function forecastEMA(
   const prices = historical.map((h) => h.price);
   const lastTime = historical[historical.length - 1].t.getTime();
 
-  // Calculate average time interval
   const intervals: number[] = [];
   for (let i = 1; i < historical.length; i++) {
     intervals.push(historical[i].t.getTime() - historical[i - 1].t.getTime());
@@ -155,15 +141,12 @@ function forecastEMA(
   const avgInterval =
     intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 60000;
 
-  // Calculate EMA
   const emaValues = calculateEMA(prices, Math.min(period, prices.length));
   const lastEMA = emaValues[emaValues.length - 1];
   const lastPrice = prices[prices.length - 1];
 
-  // Calculate momentum from recent price vs EMA
   const momentum = (lastPrice - lastEMA) / lastEMA;
 
-  // Calculate trend from EMA changes
   const emaTrend =
     emaValues.length >= 3
       ? (emaValues[emaValues.length - 1] - emaValues[emaValues.length - 3]) /
@@ -175,7 +158,6 @@ function forecastEMA(
   let currentPrice = lastPrice;
 
   for (let i = 1; i <= steps; i++) {
-    // Combine trend and momentum, with decay
     const decay = Math.exp(-i * 0.1);
     const change = (emaTrend + momentum * 0.3) * decay;
     currentPrice = currentPrice * (1 + change);
@@ -190,15 +172,10 @@ function forecastEMA(
   return predicted;
 }
 
-/**
- * Linear regression forecast
- * Projects based on best-fit line through historical data
- */
 function forecastLinear(historical: ForecastPoint[], steps: number): ForecastPoint[] {
   const prices = historical.map((h) => h.price);
   const lastTime = historical[historical.length - 1].t.getTime();
 
-  // Calculate average time interval
   const intervals: number[] = [];
   for (let i = 1; i < historical.length; i++) {
     intervals.push(historical[i].t.getTime() - historical[i - 1].t.getTime());
@@ -206,7 +183,6 @@ function forecastLinear(historical: ForecastPoint[], steps: number): ForecastPoi
   const avgInterval =
     intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 60000;
 
-  // Linear regression: y = mx + b
   const n = prices.length;
   const x = Array.from({ length: n }, (_, i) => i);
   const y = prices;
@@ -235,15 +211,11 @@ function forecastLinear(historical: ForecastPoint[], steps: number): ForecastPoi
   return predicted;
 }
 
-/**
- * Calculate Simple Moving Average
- */
 function calculateSMA(prices: number[], period: number): number[] {
   const result: number[] = [];
 
   for (let i = 0; i < prices.length; i++) {
     if (i < period - 1) {
-      // Not enough data yet, use available
       const slice = prices.slice(0, i + 1);
       result.push(slice.reduce((a, b) => a + b, 0) / slice.length);
     } else {
@@ -255,9 +227,6 @@ function calculateSMA(prices: number[], period: number): number[] {
   return result;
 }
 
-/**
- * Calculate Exponential Moving Average
- */
 function calculateEMA(prices: number[], period: number): number[] {
   const result: number[] = [];
   const multiplier = 2 / (period + 1);

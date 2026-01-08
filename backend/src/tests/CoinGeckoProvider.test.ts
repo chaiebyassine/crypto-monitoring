@@ -6,7 +6,7 @@ describe("CoinGeckoProvider", () => {
 
   beforeEach(() => {
     nock.cleanAll();
-    vi.resetModules(); // Reset les modules pour réinitialiser le rate limiter
+    vi.resetModules();
   });
 
   afterEach(() => {

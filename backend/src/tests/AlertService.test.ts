@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Utiliser vi.hoisted() pour les mocks
 const mockPrisma = vi.hoisted(() => ({
   alert: {
     findMany: vi.fn(),
@@ -21,12 +20,10 @@ vi.mock("../repos/prisma.js", () => ({
   prisma: mockPrisma,
 }));
 
-// Corriger le chemin vers NotifierService
 vi.mock("../services/NotifierService.js", () => ({
   sendAlertNotification: mockSendAlertNotification,
 }));
 
-// Import après les mocks
 import {
   evaluateAlerts,
   createAlert,

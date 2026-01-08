@@ -10,7 +10,6 @@ declare global {
   }
 }
 
-
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
@@ -58,7 +57,6 @@ export const authorize = (...allowedRoles: Role[]) => {
   };
 };
 
-
 export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
@@ -72,6 +70,7 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction): v
       }
     }
   } catch {
+    // Token invalide ou expiré - on continue sans authentification
   }
 
   next();
