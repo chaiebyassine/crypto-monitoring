@@ -10,7 +10,6 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # ==================== BACKEND ====================
   backend-lint:
     name: Backend - Lint
     runs-on: ubuntu-latest
@@ -208,7 +207,6 @@ jobs:
           name: frontend-dist
           path: frontend/dist/
 
-  # ==================== DOCKER ====================
   docker-build:
     name: Docker - Build Image
     runs-on: ubuntu-latest
@@ -230,7 +228,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ==================== NOTIFICATION ====================
   notify-success:
     name: Notify Success
     runs-on: ubuntu-latest
@@ -239,5 +236,5 @@ jobs:
     steps:
       - name: Pipeline Success
         run: |
-          echo "✅ Pipeline completed successfully!"
+          echo "Pipeline completed successfully!"
           echo "Backend and Frontend builds are ready."

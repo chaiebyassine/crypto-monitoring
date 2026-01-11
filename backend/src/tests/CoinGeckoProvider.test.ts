@@ -6,7 +6,7 @@ describe("CoinGeckoProvider", () => {
 
   beforeEach(() => {
     nock.cleanAll();
-    vi.resetModules();
+    vi.resetModules(); 
   });
 
   afterEach(() => {
