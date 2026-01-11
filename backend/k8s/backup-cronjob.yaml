@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/name: postgres-backup
     app.kubernetes.io/component: backup
 spec:
-  # Tous les jours à 2h du matin
   schedule: "0 2 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3

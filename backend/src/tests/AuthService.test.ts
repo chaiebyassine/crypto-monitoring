@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-// Les mocks doivent utiliser vi.hoisted() pour être hoistés correctement
 const mockPrisma = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock("../config/env.js", () => ({
   },
 }));
 
-// Import après les mocks
 import { AuthService } from "../services/AuthService.js";
 
 describe("AuthService", () => {

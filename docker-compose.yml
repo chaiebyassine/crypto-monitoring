@@ -35,9 +35,6 @@ services:
     networks:
       - gla-network
 
-  # ===========================================
-  # BACKEND NODE.JS / EXPRESS
-  # ===========================================
   backend:
     build:
       context: ./backend
