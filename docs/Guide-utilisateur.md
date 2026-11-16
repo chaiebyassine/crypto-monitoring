@@ -1,4 +1,4 @@
-# 📖 Guide Utilisateur - CryptoTracker
+#  Guide Utilisateur - CryptoTracker
 
 > Application de suivi de portefeuille crypto avec alertes et prévisions
 
@@ -23,10 +23,10 @@
 
 CryptoTracker est une application web complète de suivi de crypto-monnaies qui vous permet de :
 
-- 📊 **Visualiser** les cours en temps réel avec graphiques interactifs
-- 🔮 **Prévoir** l'évolution des prix avec différents algorithmes
-- 🔔 **Créer des alertes** personnalisées sur les prix
-- 💼 **Gérer votre portfolio** et suivre vos gains/pertes
+-  **Visualiser** les cours en temps réel avec graphiques interactifs
+- **Prévoir** l'évolution des prix avec différents algorithmes
+- **Créer des alertes** personnalisées sur les prix
+- **Gérer votre portfolio** et suivre vos gains/pertes
 
 ### 1.2 Fonctionnalités principales
 
@@ -176,7 +176,7 @@ L'onglet Prévisions vous permet d'obtenir des estimations sur l'évolution futu
   - Prix prédit
   - Variation prédite (en USD et %)
 
-> ⚠️ **Attention** : Les prévisions sont des estimations basées sur des modèles mathématiques. Elles ne garantissent pas l'évolution future des prix.
+>  **Attention** : Les prévisions sont des estimations basées sur des modèles mathématiques. Elles ne garantissent pas l'évolution future des prix.
 
 ---
 
@@ -297,7 +297,7 @@ PnL % = (PnL / Coût total) × 100
 
 ## 7. Administration
 
-> 🔒 Cette section est réservée aux utilisateurs avec le rôle **ADMIN**
+>  Cette section est réservée aux utilisateurs avec le rôle **ADMIN**
 
 ### 7.1 Accès
 
@@ -370,9 +370,9 @@ Le tableau de bord admin affiche :
 
 Pour toute question ou problème :
 
-- 📧 Contactez l'administrateur de la plateforme
-- 📖 Consultez la documentation technique
-- 🐛 Signalez les bugs via le système de tickets
+- Contactez l'administrateur de la plateforme
+- Consultez la documentation technique
+- Signalez les bugs via le système de tickets
 
 ---
 
