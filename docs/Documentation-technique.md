@@ -1,4 +1,4 @@
-# 🔧 Documentation Technique Complète - CryptoTracker
+#  Documentation Technique Complète - CryptoTracker
 
 > Application de suivi de portefeuille crypto avec alertes et prévisions
 
@@ -470,10 +470,10 @@ model Trade {
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| POST | `/auth/register` | Inscription | ❌ |
-| POST | `/auth/login` | Connexion | ❌ |
-| GET | `/auth/me` | Profil utilisateur | ✅ |
-| PATCH | `/auth/password` | Modifier mot de passe | ✅ |
+| POST | `/auth/register` | Inscription |  |
+| POST | `/auth/login` | Connexion |  |
+| GET | `/auth/me` | Profil utilisateur | |
+| PATCH | `/auth/password` | Modifier mot de passe |  |
 
 #### POST /auth/register
 ```json
@@ -497,16 +497,16 @@ model Trade {
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/assets` | Liste des actifs | ❌ |
-| GET | `/assets/:symbol` | Détails d'un actif | ❌ |
+| GET | `/assets` | Liste des actifs |  |
+| GET | `/assets/:symbol` | Détails d'un actif |  |
 
 ### 6.3 Prix
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/prices` | Prix historiques | ❌ |
-| GET | `/prices/ohlc` | Données OHLC | ❌ |
-| GET | `/prices/changes` | Variations 24h | ❌ |
+| GET | `/prices` | Prix historiques |  |
+| GET | `/prices/ohlc` | Données OHLC |  |
+| GET | `/prices/changes` | Variations 24h |  |
 
 #### GET /prices
 ```
@@ -530,12 +530,12 @@ Response:
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/alerts` | Liste des alertes | ✅ |
-| GET | `/alerts/:id` | Détails d'une alerte | ✅ |
-| POST | `/alerts` | Créer une alerte | ✅ |
-| PATCH | `/alerts/:id/activate` | Activer | ✅ |
-| PATCH | `/alerts/:id/deactivate` | Désactiver | ✅ |
-| DELETE | `/alerts/:id` | Supprimer | ✅ |
+| GET | `/alerts` | Liste des alertes |  |
+| GET | `/alerts/:id` | Détails d'une alerte |  |
+| POST | `/alerts` | Créer une alerte |  |
+| PATCH | `/alerts/:id/activate` | Activer | |
+| PATCH | `/alerts/:id/deactivate` | Désactiver |  |
+| DELETE | `/alerts/:id` | Supprimer |  |
 
 #### POST /alerts
 ```json
@@ -550,14 +550,14 @@ Response:
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/portfolios` | Liste des portfolios | ✅ |
-| GET | `/portfolios/:id` | Détails portfolio | ✅ |
-| POST | `/portfolios` | Créer portfolio | ✅ |
-| DELETE | `/portfolios/:id` | Supprimer portfolio | ✅ |
-| GET | `/portfolios/:id/positions` | Positions | ✅ |
-| GET | `/portfolios/:id/pnl` | Calcul PnL | ✅ |
-| GET | `/portfolios/:id/trades` | Historique trades | ✅ |
-| POST | `/portfolios/:id/trades` | Exécuter trade | ✅ |
+| GET | `/portfolios` | Liste des portfolios |  |
+| GET | `/portfolios/:id` | Détails portfolio |  |
+| POST | `/portfolios` | Créer portfolio |  |
+| DELETE | `/portfolios/:id` | Supprimer portfolio |  |
+| GET | `/portfolios/:id/positions` | Positions |  |
+| GET | `/portfolios/:id/pnl` | Calcul PnL |  |
+| GET | `/portfolios/:id/trades` | Historique trades |  |
+| POST | `/portfolios/:id/trades` | Exécuter trade |  |
 
 #### POST /portfolios/:id/trades
 ```json
@@ -572,7 +572,7 @@ Response:
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/forecast` | Générer prévision | ❌ |
+| GET | `/forecast` | Générer prévision |  |
 
 #### GET /forecast
 ```
@@ -599,12 +599,12 @@ Response:
 
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/admin/stats` | Statistiques globales | 🔒 ADMIN |
-| GET | `/admin/users` | Liste utilisateurs | 🔒 ADMIN |
-| GET | `/admin/users/:id` | Détails utilisateur | 🔒 ADMIN |
-| POST | `/admin/users` | Créer utilisateur | 🔒 ADMIN |
-| PATCH | `/admin/users/:id` | Modifier utilisateur | 🔒 ADMIN |
-| DELETE | `/admin/users/:id` | Supprimer utilisateur | 🔒 ADMIN |
+| GET | `/admin/stats` | Statistiques globales |  ADMIN |
+| GET | `/admin/users` | Liste utilisateurs |  ADMIN |
+| GET | `/admin/users/:id` | Détails utilisateur |  ADMIN |
+| POST | `/admin/users` | Créer utilisateur |  ADMIN |
+| PATCH | `/admin/users/:id` | Modifier utilisateur |  ADMIN |
+| DELETE | `/admin/users/:id` | Supprimer utilisateur |  ADMIN |
 
 ### 6.8 Santé
 
@@ -785,12 +785,12 @@ const valid = await bcrypt.compare(password, user.password);
 
 ### 8.4 Bonnes pratiques
 
-- ✅ Mots de passe hashés avec bcrypt (cost factor 12)
-- ✅ Tokens JWT avec expiration
-- ✅ Middleware d'authentification sur routes protégées
-- ✅ Middleware d'autorisation pour les routes admin
-- ✅ Validation des entrées utilisateur
-- ✅ Gestion des erreurs sans fuite d'information
+-  Mots de passe hashés avec bcrypt (cost factor 12)
+-  Tokens JWT avec expiration
+- Middleware d'authentification sur routes protégées
+-  Middleware d'autorisation pour les routes admin
+-  Validation des entrées utilisateur
+-  Gestion des erreurs sans fuite d'information
 
 ---
 
